@@ -2,74 +2,53 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Пазл: Собери картинку</title>
+  <title>Перетащи в цель</title>
   <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      margin-top: 20px;
+    #box {
+      width: 100px;
+      height: 100px;
+      background-color: blue;
+      margin: 20px;
+      cursor: grab;
     }
-    #board {
-      width: 400px;
-      height: 400px;
-      margin: auto;
-      display: flex;
-      flex-wrap: wrap;
-      border: 2px solid #000;
+
+    #target {
+      width: 120px;
+      height: 120px;
+      border: 2px dashed green;
+      margin: 20px auto;
     }
-    .piece {
-      width: 200px;
-      height: 200px;
-      box-sizing: border-box;
-      border: 1px solid #999;
-      background-image: url('https://sun9-3.userapi.com/impg/vxBZgckQyhFhpkX7V5FQvNmz-2fpaWGDwrWfNg/3Zn9PEFnrn4.jpg?size=350x604&quality=96&sign=1b4adada310abcfa40aff68029028b3c&type=album');
-      background-size: 400px 400px;
-      background-repeat: no-repeat;
+
+    #message {
+      font-size: 20px;
+      color: green;
+      display: none;
     }
   </style>
 </head>
 <body>
-  <h2>Собери картинку</h2>
-  <div id="board"></div>
+  <div id="box" draggable="true"></div>
+  <div id="target"></div>
+  <p id="message">Молодец!</p>
 
   <script>
-    const board = document.getElementById('board');
+    const box = document.getElementById("box");
+    const target = document.getElementById("target");
+    const message = document.getElementById("message");
 
-    // координаты частей картинки
-    const positions = [
-      '0px 0px',
-      '-200px 0px',
-      '0px -200px',
-      '-200px -200px'
-    ];
-
-    // создаём и перемешиваем части
-    const shuffled = positions.sort(() => Math.random() - 0.5);
-    shuffled.forEach((pos, i) => {
-      const div = document.createElement('div');
-      div.className = 'piece';
-      div.style.backgroundPosition = pos;
-      div.draggable = true;
-      div.dataset.position = pos;
-      board.appendChild(div);
+    box.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("text/plain", "box");
     });
 
-    let dragged;
-
-    board.addEventListener('dragstart', e => {
-      dragged = e.target;
-    });
-
-    board.addEventListener('dragover', e => {
+    target.addEventListener("dragover", e => {
       e.preventDefault();
     });
 
-    board.addEventListener('drop', e => {
-      if (e.target.className === 'piece' && e.target !== dragged) {
-        // обмен позициями
-        const temp = dragged.style.backgroundPosition;
-        dragged.style.backgroundPosition = e.target.style.backgroundPosition;
-        e.target.style.backgroundPosition = temp;
+    target.addEventListener("drop", e => {
+      const data = e.dataTransfer.getData("text/plain");
+      if (data === "box") {
+        target.appendChild(box);
+        message.style.display = "block";
       }
     });
   </script>
