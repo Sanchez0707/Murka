@@ -44,7 +44,7 @@
     }
     .ghost {
       position: absolute; width:100%; height:100%;
-      background: rgba(50,50,50,0.6);
+      background: rgba(50,50,50,0.75);
     }
     #controls {
       display: flex; justify-content: center; align-items: center;
@@ -82,9 +82,9 @@
   </div>
 
   <div id="controls">
-    <button id="btn-rot">↻</button>
     <button id="btn-left">←</button>
     <button id="btn-right">→</button>
+    <button id="btn-rot">↻</button>
     <button id="btn-drop">↓</button>
   </div>
 
@@ -98,7 +98,6 @@
   const restartBtn = document.getElementById('restart');
   const speedSelect = document.getElementById('speed-select');
 
-  // Фигуры: I, O, T, L
   const SHAPES = [
     [[1,1,1,1]],
     [[1,1],[1,1]],
@@ -108,7 +107,6 @@
 
   let grid, current, pos;
 
-  // Построение поля
   for (let i=0;i<COLS*ROWS;i++){
     const c=document.createElement('div');
     c.className='cell';
@@ -148,15 +146,12 @@
   }
 
   function draw(){
-    // очистка
     grid.flat().forEach((v,i)=>{
       cells[i].innerHTML='';
     });
-    // занятые
     grid.forEach((row,y)=>row.forEach((v,x)=>{
       if(v) cells[y*COLS+x].innerHTML='<div class="block"></div>';
     }));
-    // ghost
     let gy=pos.y;
     while(!collide(pos.x,gy+1)) gy++;
     current.forEach((r,ry)=>r.forEach((v,rx)=>{
@@ -164,7 +159,6 @@
         cells[(gy+ry)*COLS + (pos.x+rx)].innerHTML='<div class="ghost"></div>';
       }
     }));
-    // current
     current.forEach((r,ry)=>r.forEach((v,rx)=>{
       if(v){
         cells[(pos.y+ry)*COLS + (pos.x+rx)].innerHTML='<div class="block"></div>';
@@ -190,7 +184,6 @@
   function drop(){
     if(!collide(pos.x,pos.y+1)) pos.y++;
     else {
-      // зафиксировать
       current.forEach((r,ry)=>r.forEach((v,rx)=>{
         if(v) grid[pos.y+ry][pos.x+rx]=1;
       }));
@@ -200,7 +193,6 @@
     draw();
   }
 
-  // Управления
   document.getElementById('btn-left').addEventListener('mousedown',e=>{
     e.preventDefault();
     if(!collide(pos.x-1,pos.y)) pos.x--;
@@ -219,12 +211,12 @@
   });
   document.getElementById('btn-drop').addEventListener('mousedown',e=>{
     e.preventDefault();
-    // падение на 3 клетки
     for(let i=0;i<3;i++){
       if(!collide(pos.x,pos.y+1)) pos.y++;
     }
     draw();
   });
+
   restartBtn.addEventListener('mousedown',e=>{
     e.preventDefault(); resetGame();
   });
@@ -234,7 +226,6 @@
     dropIntervalId = setInterval(drop, 500/speed);
   });
 
-  // Старт
   resetGame();
 </script>
 
