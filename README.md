@@ -5,35 +5,36 @@
   <title>Тетрис</title>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
   <style>
-    body { margin:0; padding:0; font-family:Arial,sans-serif;
-      text-align:center; background:#222; color:#fafafa;
+    body { margin:0; padding:0; background:#222; color:#fafafa;
+      font-family:Arial,sans-serif; text-align:center;
       user-select:none; touch-action:manipulation;
     }
     h1 { margin:10px 0; }
-    #top-bar { display:flex; justify-content:space-between; align-items:center;
+    #top-bar {
+      display:flex; justify-content:space-between; align-items:center;
       max-width:400px; margin:auto; padding:0 10px;
     }
     #score-box { font-size:18px }
-    #restart { padding:5px 10px; font-size:14px; cursor:pointer }
-    #speed-select { padding:4px; font-size:14px }
-    #board { display:grid; grid-template-columns:repeat(10,30px);
-      grid-template-rows:repeat(12,30px); gap:1px;
-      background:#444; margin:10px auto;
-      width: calc(10*30px + 9px);
+    #restart { padding:5px 10px; cursor:pointer }
+    #board {
+      display:grid;
+      grid-template-columns:repeat(10,30px);
+      grid-template-rows:repeat(14,30px);
+      gap:1px; background:#444;
+      margin:10px auto; width:calc(10*30px+9px);
     }
-    .cell { width:30px; height:30px; background:#eee;
-      border:1px solid #ccc; position:relative; box-sizing:border-box;
+    .cell {
+      position:relative; width:30px; height:30px;
+      background:#eee; border:1px solid #ccc;
     }
-    .block { position:absolute; width:100%; height:100%; background:#333 }
-    .ghost { position:absolute; width:100%; height:100%;
-      background:rgba(50,50,50,0.75);
+    .block { position:absolute; width:100%; height:100%; background:#333; }
+    .ghost { position:absolute; width:100%; height:100%; background:rgba(50,50,50,0.75); }
+    #controls {
+      display:flex; justify-content:center; gap:10px; margin:15px 0;
     }
-    #controls { display:flex; justify-content:center; gap:10px;
-      margin:15px 0;
-    }
-    #controls button { width:50px; height:50px; font-size:24px;
-      cursor:pointer; border:none; border-radius:4px;
-      background:#555; color:#fafafa;
+    #controls button {
+      width:50px; height:50px; font-size:24px;
+      background:#555; color:#fafafa; border:none; border-radius:4px;
     }
     #controls button:active { background:#777 }
     footer { margin:20px 0; font-size:12px; color:#888 }
@@ -44,17 +45,7 @@
   <h1>Тетрис</h1>
   <div id="top-bar">
     <button id="restart">Заново</button>
-    <div>
-      Скорость: 
-      <select id="speed-select">
-        <option value="0.5">0.50×</option>
-        <option value="0.75">0.75×</option>
-        <option value="1" selected>1×</option>
-        <option value="1.25">1.25×</option>
-        <option value="1.5">1.50×</option>
-      </select>
-    </div>
-    <div id="score-box">Очки: 0</div>
+    <div id="score-box">Очки: 0</div>
   </div>
 
   <div id="board"></div>
@@ -69,47 +60,47 @@
   <footer>Я не пытаюсь кого-либо плагиатить</footer>
 
 <script>
-  const COLS = 10, ROWS = 12;
-  let speed = 1, dropInterval, score = 0;
-  const boardEl = document.getElementById('board');
-  const scoreBox = document.getElementById('score-box');
-  const restartBtn = document.getElementById('restart');
-  const speedSel = document.getElementById('speed-select');
+  const COLS = 10, ROWS = 14;
+  let score=0, dropInt;
 
-  // Фигуры: I, O, T, L, новая 5, новая 6
+  const board = document.getElementById('board');
+  const scoreBox = document.getElementById('score-box');
+  const restart = document.getElementById('restart');
+
+  // создаём сетку
+  for(let i=0;i<COLS*ROWS;i++){
+    const c=document.createElement('div');
+    c.className='cell';
+    board.appendChild(c);
+  }
+  const cells = board.children;
+
+  // фигуры: I, O, T, L, плюс‑образная, угол‑образная
   const SHAPES = [
     [[1,1,1,1]],
     [[1,1],[1,1]],
     [[0,1,0],[1,1,1]],
     [[1,0,0],[1,1,1]],
-    [[1,1,0],[0,1,1],[0,1,0]], // пример новой 5
-    [[0,1,1,0],[1,1,0,0]]      // пример новой 6
+    [[0,1,0],[1,1,1],[0,1,0]],  // плюс
+    [[1,1,0],[1,0,0],[1,1,1]]   // угол‑образная
   ];
 
   let grid, current, pos;
 
-  // Создаём поле
-  for(let i=0;i<COLS*ROWS;i++){
-    const c=document.createElement('div');
-    c.className='cell';
-    boardEl.appendChild(c);
-  }
-  const cells = boardEl.children;
-
   function resetGame(){
-    clearInterval(dropInterval);
+    clearInterval(dropInt);
     grid = Array.from({length:ROWS},()=>Array(COLS).fill(0));
-    score = 0; scoreBox.textContent='Очки: 0';
+    score=0; scoreBox.textContent='Очки: 0';
     spawn(); draw();
-    dropInterval = setInterval(drop, 500/speed);
+    dropInt = setInterval(drop, 500);
   }
 
   function spawn(){
     const s = SHAPES[Math.floor(Math.random()*SHAPES.length)];
     current = s.map(r=>[...r]);
-    pos = { x: Math.floor((COLS - current[0].length)/2), y:0 };
+    pos = {x:Math.floor((COLS-current[0].length)/2), y:0};
     if(collide(pos.x,pos.y)){
-      clearInterval(dropInterval);
+      clearInterval(dropInt);
       alert('Игра окончена!');
     }
   }
@@ -127,15 +118,19 @@
   }
 
   function draw(){
+    // очистка
     grid.flat().forEach((v,i)=>cells[i].innerHTML='');
+    // отрисовка занятых
     grid.forEach((row,y)=>row.forEach((v,x)=>{
       if(v) cells[y*COLS+x].innerHTML='<div class="block"></div>';
     }));
-    let gy=pos.y;
+    // призрак
+    let gy = pos.y;
     while(!collide(pos.x,gy+1)) gy++;
     current.forEach((r,ry)=>r.forEach((v,rx)=>{
       if(v) cells[(gy+ry)*COLS + pos.x+rx].innerHTML='<div class="ghost"></div>';
     }));
+    // текущая
     current.forEach((r,ry)=>r.forEach((v,rx)=>{
       if(v) cells[(pos.y+ry)*COLS + pos.x+rx].innerHTML='<div class="block"></div>';
     }));
@@ -151,8 +146,8 @@
       }
     }
     if(lines){
-      score += lines*10;
-      scoreBox.textContent='Очки: '+score;
+      score+=lines*10;
+      scoreBox.textContent='Очки: '+score;
     }
   }
 
@@ -167,29 +162,31 @@
     draw();
   }
 
-  // Управление
+  // управление
   document.getElementById('btn-left').addEventListener('mousedown',e=>{
-    e.preventDefault(); if(!collide(pos.x-1,pos.y)) pos.x--; draw();
+    e.preventDefault();
+    if(!collide(pos.x-1,pos.y)) pos.x--;
+    draw();
   });
   document.getElementById('btn-right').addEventListener('mousedown',e=>{
-    e.preventDefault(); if(!collide(pos.x+1,pos.y)) pos.x++; draw();
+    e.preventDefault();
+    if(!collide(pos.x+1,pos.y)) pos.x++;
+    draw();
   });
   document.getElementById('btn-rot').addEventListener('mousedown',e=>{
     e.preventDefault();
     const R = current[0].map((_,i)=>current.map(r=>r[i]).reverse());
-    if(!collide(pos.x,pos.y,R)) current=R; draw();
+    if(!collide(pos.x,pos.y,R)) current=R;
+    draw();
   });
   document.getElementById('btn-drop').addEventListener('mousedown',e=>{
     e.preventDefault();
-    for(let i=0;i<3;i++) if(!collide(pos.x,pos.y+1)) pos.y++;
+    for(let i=0;i<3;i++){
+      if(!collide(pos.x,pos.y+1)) pos.y++;
+    }
     draw();
   });
-  restartBtn.addEventListener('mousedown',()=>resetGame());
-  speedSel.addEventListener('change',()=>{
-    speed=parseFloat(speedSel.value);
-    clearInterval(dropInterval);
-    dropInterval=setInterval(drop,500/speed);
-  });
+  restart.addEventListener('mousedown',()=>resetGame());
 
   resetGame();
 </script>
