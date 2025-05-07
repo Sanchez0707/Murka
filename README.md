@@ -1,16 +1,28 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>Мини‑Тетрис 10×10</title>
+  <meta charset="UTF-8"/>
+  <title>Фолл‑Тетрис 10×10</title>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"/>
   <style>
     body {
       margin: 20px;
-      font-family: Arial, sans-serif;
+      font-family: sans-serif;
       text-align: center;
-      touch-action: manipulation;
       user-select: none;
+    }
+    #top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 380px;
+      margin: auto 0 10px;
+    }
+    #score-box {
+      width: 60px; height: 50px;
+      border: 1px solid #333;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
     }
     #board {
       display: grid;
@@ -19,255 +31,192 @@
       gap: 1px;
       margin: auto;
       width: max-content;
+      background: #555;
     }
     .cell {
       width: 30px; height: 30px;
       background: #eee; border:1px solid #ccc;
-    }
-    .filled { background:#444 }
-    .red    { background:red!important }
-
-    #controls {
+      box-sizing: border-box;
       position: relative;
-      width: 160px; height: 160px;
-      margin: 30px auto 0;
     }
-    .btn {
+    .block {
       position: absolute;
+      width: 100%; height: 100%;
+      background: #444;
+    }
+    .ghost {
+      position: absolute;
+      width: 100%; height: 100%;
+      background: rgba(100,100,100,0.3);
+    }
+    #controls {
+      margin-top: 15px;
+    }
+    #controls button {
       width: 50px; height: 50px;
-      font-size: 24px;
-      background: #f0f0f0;
-      border: none; border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      line-height: 50px;
-    }
-    .btn:active { background: #ccc }
-    #btn-up    { top: 0;    left: 55px; }
-    #btn-down  { bottom:0; left: 55px; }
-    #btn-left  { top: 55px; left: 0;    }
-    #btn-right { top: 55px; right:0;    }
-    #btn-place { top: 55px; left: 55px; }
-    #btn-rot   { top: 0;    right:0;    }
-
-    #top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      max-width: 360px;
-      margin: 10px auto;
-    }
-    #score, #timer {
-      font-size: 18px;
-    }
-    #restart {
-      padding: 5px 10px;
-      font-size: 14px;
+      font-size: 24px; margin: 5px;
       cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-<h1>Мини‑Тетрис 10×10</h1>
-<div id="top-bar">
-  <div id="score">Очки: 0</div>
-  <button id="restart">Заново</button>
-  <div id="timer">Время: <span id="time">15</span></div>
-</div>
+  <h1>Фолл‑Тетрис 10×10</h1>
+  <div id="top-bar">
+    <div id="score-box">0</div>
+    <button onclick="startGame()">Заново</button>
+  </div>
 
-<div id="board"></div>
+  <div id="board"></div>
 
-<div id="controls">
-  <button id="btn-up"    class="btn">↑</button>
-  <button id="btn-down"  class="btn">↓</button>
-  <button id="btn-left"  class="btn">←</button>
-  <button id="btn-right" class="btn">→</button>
-  <button id="btn-place" class="btn">•</button>
-  <button id="btn-rot"   class="btn">⟳</button>
-</div>
+  <div id="controls">
+    <button id="up">/\\</button>
+    <button id="left">&lt;</button>
+    <button id="down">\\/</button>
+    <button id="right">&gt;</button>
+  </div>
 
 <script>
-  const boardSize = 10;
-  const boardEl    = document.getElementById('board');
-  const timeEl     = document.getElementById('time');
-  const scoreEl    = document.getElementById('score');
-  const restartBtn = document.getElementById('restart');
-
-  let grid, current, pos, timer, interval, score = 0;
-  const figures = [
-    [[1,1],[1,1]],
-    [[1,1,1]],
-    [[1],[1],[1],[1]],
-    [[0,1,0],[1,1,1]],
-    [[1,0],[1,0],[1,1]]
+  const cols = 10, rows = 10, boardEl = document.getElementById('board'),
+        scoreBox = document.getElementById('score-box');
+  const shapes = [
+    [[1,1,1,1]],               // I
+    [[1,1],[1,1]],             // O
+    [[0,1,0],[1,1,1]],         // T
+    [[1,0,0],[1,1,1]],         // J
+    [[0,0,1],[1,1,1]],         // L
+    [[1,1,0],[0,1,1]],         // S
+    [[0,1,1],[1,1,0]]          // Z
   ];
+  let grid, current, pos, dropInterval, dropSpeed=500, score;
 
-  // Построение поля
-  for (let i=0; i<boardSize*boardSize; i++){
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    boardEl.appendChild(cell);
+  // Создаем клетки
+  for(let i=0;i<cols*rows;i++){
+    const c=document.createElement('div');
+    c.className='cell';
+    boardEl.appendChild(c);
   }
   const cells = boardEl.children;
 
-  function clamp(v,min,max){ return v<min?min:(v>max?max:v); }
-
-  // Проверка коллизии для фигуры fig на позиции p
-  function canPlaceAt(p, fig = current) {
-    for (let y=0; y<fig.length; y++){
-      for (let x=0; x<fig[0].length; x++){
-        if (fig[y][x]) {
-          const px = p.x + x, py = p.y + y;
-          if (px<0||px>=boardSize||py<0||py>=boardSize||grid[py][px]) {
-            return false;
-          }
-        }
-      }
-    }
-    return true;
+  function resetGrid(){
+    grid=Array(rows).fill().map(()=>Array(cols).fill(0));
   }
 
-  // Отрисовка сетки и превью
-  function draw(){
-    grid.flat().forEach((v,i)=>{
-      cells[i].className = v ? 'cell filled' : 'cell';
-    });
-    // рисуем превью только если валидно
-    if (canPlaceAt(pos, current)) {
-      current.forEach((row,y)=>{
-        row.forEach((v,x)=>{
-          if (v){
-            const idx = (pos.y+y)*boardSize + (pos.x+x);
-            cells[idx].classList.add('filled');
-          }
-        });
+  function drawGrid(){
+    for(let y=0;y<rows;y++){
+      for(let x=0;x<cols;x++){
+        const idx=y*cols+x;
+        cells[idx].innerHTML = grid[y][x]?'<div class="block"></div>':'';
+      }
+    }
+  }
+
+  function drawCurrent(){
+    // ghost (призрак)
+    let ghostY=pos.y;
+    while(!collide(current, pos.x, ghostY+1)) ghostY++;
+    current.forEach((r,dy)=>{
+      r.forEach((v,dx)=>{
+        if(v){
+          const idx=(ghostY+dy)*cols + (pos.x+dx);
+          cells[idx].innerHTML = '<div class="ghost"></div>';
+        }
       });
-    }
+    });
+    // current
+    current.forEach((r,dy)=>{
+      r.forEach((v,dx)=>{
+        if(v){
+          const idx=(pos.y+dy)*cols + (pos.x+dx);
+          cells[idx].innerHTML = '<div class="block"></div>';
+        }
+      });
+    });
   }
 
-  // Перемещение
-  function move(dir){
-    const delta = { left:{x:-1,y:0}, right:{x:1,y:0}, up:{x:0,y:-1}, down:{x:0,y:1} }[dir];
-    const newPos = { x: clamp(pos.x+delta.x, 0, boardSize-current[0].length),
-                     y: clamp(pos.y+delta.y, 0, boardSize-current.length) };
-    if (canPlaceAt(newPos)) {
-      pos = newPos;
-      draw();
-    }
-  }
-
-  // Поворот с wall-kick
-  function rotate(){
-    const R = current[0].map((_,i)=>current.map(r=>r[i]).reverse());
-    for (let dx of [0,-1,1]){
-      for (let dy of [0,-1,1]){
-        const test = { x: clamp(pos.x+dx, 0, boardSize-R[0].length),
-                       y: clamp(pos.y+dy, 0, boardSize-R.length) };
-        if (canPlaceAt(test, R)) {
-          current = R;
-          pos = test;
-          draw();
-          return;
+  function collide(shape, x, y){
+    for(let dy=0;dy<shape.length;dy++){
+      for(let dx=0;dx<shape[0].length;dx++){
+        if(shape[dy][dx]){
+          const ny=y+dy, nx=x+dx;
+          if(nx<0||nx>=cols||ny>=rows||grid[ny][nx]) return true;
         }
       }
     }
+    return false;
   }
 
-  // Установка фигуры
-  function placeFigure(){
-    if (!canPlaceAt(pos)) return;
-    current.forEach((row,y)=>row.forEach((v,x)=>{
-      if (v) grid[pos.y+y][pos.x+x] = 1;
+  function rotateShape(){
+    const R = current[0].map((_,i)=>current.map(r=>r[i]).reverse());
+    if(!collide(R,pos.x,pos.y)) current=R;
+  }
+
+  function place(){
+    current.forEach((r,dy)=>r.forEach((v,dx)=>{
+      if(v) grid[pos.y+dy][pos.x+dx]=1;
     }));
     clearLines();
-    newFigure();
+    spawn();
   }
 
-  // Очистка заполненных линий
   function clearLines(){
-    for (let y=0; y<boardSize; y++){
-      if (grid[y].every(v=>v)){
-        grid[y].fill(0);
-        score += 10;
+    let lines=0;
+    for(let y=rows-1;y>=0;y--){
+      if(grid[y].every(v=>v)){
+        grid.splice(y,1);
+        grid.unshift(Array(cols).fill(0));
+        lines++;
+        y++;
       }
     }
-    for (let x=0; x<boardSize; x++){
-      if (grid.every(r=>r[x])){
-        grid.forEach(r=>r[x]=0);
-        score += 10;
-      }
+    if(lines){
+      score+=lines*10;
+      scoreBox.textContent=score;
     }
-    scoreEl.textContent = `Очки: ${score}`;
   }
 
-  // Новый спавн фигуры (поиск любой валидной позиции)
-  function newFigure(){
-    clearInterval(interval);
-    timer = 15;
-    timeEl.textContent = timer;
-    current = figures[Math.floor(Math.random()*figures.length)].map(r=>[...r]);
-
-    let found=false;
-    for (let y=0; y<=boardSize-current.length; y++){
-      for (let x=0; x<=boardSize-current[0].length; x++){
-        const p={x,y};
-        if (canPlaceAt(p)){
-          pos = p; found=true; break;
-        }
-      }
-      if(found) break;
+  function spawn(){
+    const s=shapes[Math.floor(Math.random()*shapes.length)];
+    current=s.map(r=>[...r]);
+    pos={x:Math.floor((cols-current[0].length)/2), y:0};
+    if(collide(current,pos.x,pos.y)){
+      // game over
+      clearInterval(dropInterval);
+      alert('Игра окончена!');
     }
-    if (!found){
-      alert("Игра окончена!");
-      startGame();
-      return;
-    }
-
-    draw();
-    interval = setInterval(()=>{
-      timer--;
-      timeEl.textContent = timer;
-      if (timer<=0){
-        clearInterval(interval);
-        autoPlace();
-      }
-    },1000);
   }
 
-  // Автопостановка
-  function autoPlace(){
-    for (let y=0; y<=boardSize-current.length; y++){
-      for (let x=0; x<=boardSize-current[0].length; x++){
-        const p={x,y};
-        if (canPlaceAt(p)){
-          pos = p;
-          placeFigure();
-          return;
-        }
-      }
+  function drop(){
+    if(!collide(current,pos.x,pos.y+1)){
+      pos.y++;
+    } else {
+      place();
     }
-    newFigure();
+    render();
   }
 
-  // Сброс игры
+  function render(){
+    drawGrid();
+    drawCurrent();
+  }
+
   function startGame(){
-    clearInterval(interval);
-    grid = Array.from({length:boardSize}, ()=>Array(boardSize).fill(0));
-    score = 0; scoreEl.textContent = `Очки: ${score}`;
-    newFigure();
+    clearInterval(dropInterval);
+    score=0; scoreBox.textContent=score;
+    resetGrid();
+    spawn();
+    render();
+    dropInterval = setInterval(drop, dropSpeed);
   }
 
-  // Настройка кнопок
-  ['up','down','left','right','place','rot'].forEach(key=>{
-    const id = key==='place'?'btn-place': key==='rot'?'btn-rot': 'btn-'+key;
-    document.getElementById(id)
-      .addEventListener('mousedown', ()=> key==='place'?placeFigure(): key==='rot'?rotate(): move(key));
-  });
-  restartBtn.addEventListener('click', startGame);
+  // Управление
+  document.getElementById('left').onclick = ()=>{ if(!collide(current,pos.x-1,pos.y)) pos.x--; render(); };
+  document.getElementById('right').onclick = ()=>{ if(!collide(current,pos.x+1,pos.y)) pos.x++; render(); };
+  document.getElementById('down').onclick = ()=>{ drop(); };
+  document.getElementById('up').onclick = ()=>{ rotateShape(); render(); };
 
-  // Старт
+  // Запуск
   startGame();
 </script>
-
 </body>
 </html>
