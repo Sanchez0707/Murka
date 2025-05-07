@@ -10,7 +10,6 @@
       font-family: Arial, sans-serif;
       text-align: center;
       user-select: none;
-      touch-action: manipulation;
     }
     #header {
       display: flex;
@@ -83,7 +82,7 @@
   <script>
     const boardSize = 10,
           boardEl    = document.getElementById('board'),
-          timeEl     = document.getElementById('time');
+          timeSpan   = document.getElementById('time');
 
     let grid, figures, current, pos, timer, interval;
 
@@ -95,29 +94,29 @@
       [[1,0],[1,0],[1,1]]
     ];
 
-    function initGrid() {
-      grid = Array.from({length:boardSize}, ()=>Array(boardSize).fill(0));
+    function createBoard() {
       boardEl.innerHTML = '';
-      for(let i=0;i<boardSize*boardSize;i++){
+      for(let i=0; i<boardSize*boardSize; i++){
         let cell = document.createElement('div');
         cell.className = 'cell';
         boardEl.appendChild(cell);
       }
-      resetGame();
+    }
+
+    function initGrid() {
+      grid = Array.from({length:boardSize}, ()=>Array(boardSize).fill(0));
     }
 
     function draw() {
       const cells = boardEl.children;
-      // отрисовка занятых
       grid.flat().forEach((v,i)=>{
         cells[i].className = v ? 'cell filled' : 'cell';
       });
-      // отрисовка превью только если валидно
       if (canPlaceAt(pos.x, pos.y)) {
-        current.forEach((row, y) => {
-          row.forEach((v, x) => {
+        current.forEach((row,y)=>{
+          row.forEach((v,x)=>{
             if (v) {
-              let idx = (pos.y + y)*boardSize + (pos.x + x);
+              let idx = (pos.y+y)*boardSize + (pos.x+x);
               cells[idx].classList.add('filled');
             }
           });
@@ -125,32 +124,33 @@
       }
     }
 
-    function clamp(v,min,max) { return v<min?min:(v>max?max:v); }
+    function clamp(v,min,max){ return v<min?min:(v>max?max:v); }
 
     function canPlaceAt(px, py) {
-      return current.every((row,y) =>
+      return current.every((row,y)=>
         row.every((v,x)=>
-          !v || (px+x>=0 && px+x<boardSize && py+y>=0 && py+y<boardSize && !grid[py+y][px+x])
+          !v ||
+          (px+x>=0 && px+x<boardSize && py+y>=0 && py+y<boardSize && !grid[py+y][px+x])
         )
       );
     }
 
     function move(dir) {
       let {x,y} = pos;
-      if (dir==='left') x--;
+      if (dir==='left')  x--;
       if (dir==='right') x++;
-      if (dir==='up') y--;
-      if (dir==='down') y++;
-      pos.x = clamp(x, 0, boardSize-current[0].length);
-      pos.y = clamp(y, 0, boardSize-current.length);
+      if (dir==='up')    y--;
+      if (dir==='down')  y++;
+      pos.x = clamp(x, 0, boardSize - current[0].length);
+      pos.y = clamp(y, 0, boardSize - current.length);
       draw();
     }
 
     function rotate() {
       let R = current[0].map((_,i)=> current.map(r=>r[i]).reverse());
       current = R;
-      pos.x = clamp(pos.x, 0, boardSize-current[0].length);
-      pos.y = clamp(pos.y, 0, boardSize-current.length);
+      pos.x = clamp(pos.x, 0, boardSize - current[0].length);
+      pos.y = clamp(pos.y, 0, boardSize - current.length);
       draw();
     }
 
@@ -164,17 +164,19 @@
     }
 
     function clearLines() {
-      for(let y=0;y<boardSize;y++){
-        if(grid[y].every(v=>v)) grid[y].fill(0);
+      // горизонтали
+      for(let y=0; y<boardSize; y++){
+        if (grid[y].every(v=>v)) grid[y].fill(0);
       }
-      for(let x=0;x<boardSize;x++){
-        if(grid.every(r=>r[x])) grid.forEach(r=>r[x]=0);
+      // вертикали
+      for(let x=0; x<boardSize; x++){
+        if (grid.every(r=>r[x])) grid.forEach(r=>r[x]=0);
       }
     }
 
     function newFigure() {
       clearInterval(interval);
-      timer = 15; timeEl.textContent = timer;
+      timer = 15; timeSpan.textContent = timer;
       current = figures[Math.floor(Math.random()*figures.length)].map(r=>[...r]);
       pos = {
         x: Math.floor((boardSize - current[0].length)/2),
@@ -182,40 +184,41 @@
       };
       draw();
       interval = setInterval(()=>{
-        timerEl();
+        timer--;
+        timeSpan.textContent = timer;
+        if (timer <= 0) {
+          clearInterval(interval);
+          autoPlace();
+        }
       },1000);
     }
 
-    function timerEl() {
-      if (--timer <= 0) {
-        clearInterval(interval);
-        autoPlace();
-      }
-      timeEl.textContent = timer;
-    }
-
     function autoPlace() {
-      // ищем валидные
-      let opts=[];
-      for(let y=0;y<=boardSize-current.length;y++){
-        for(let x=0;x<=boardSize-current[0].length;x++){
+      let opts = [];
+      for(let y=0; y<=boardSize-current.length; y++){
+        for(let x=0; x<=boardSize-current[0].length; x++){
           if (canPlaceAt(x,y)) opts.push({x,y});
         }
       }
-      if(opts.length){
-        let p = opts[Math.floor(Math.random()*opts.length)];
-        pos = p;
+      if (opts.length) {
+        pos = opts[Math.floor(Math.random() * opts.length)];
+        placeFigure();
+      } else {
+        newFigure();
       }
-      placeFigure();
     }
 
     function resetGame() {
       clearInterval(interval);
       initGrid();
+      newFigure();
+      draw();
     }
 
-    // старт
-    initGrid();
+    // Инициализация
+    createBoard();
+    resetGame();
   </script>
+
 </body>
 </html>
