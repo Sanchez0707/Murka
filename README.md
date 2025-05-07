@@ -1,204 +1,193 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Murka</title>
+  <meta charset="UTF-8" />
+  <title>Мини‑Тетрис 10×10</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"/>
   <style>
     body {
+      margin: 20px;
       font-family: Arial, sans-serif;
       text-align: center;
-      margin: 20px;
     }
-
-    h1 {
-      color: #007bff;
+    #timer {
+      font-size: 20px;
+      margin-bottom: 10px;
     }
-
-    .container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 40px;
-      flex-wrap: wrap;
-    }
-
-    .grid {
+    #board {
       display: grid;
-      grid-template-columns: repeat(10, 30px);
-      grid-template-rows: repeat(10, 30px);
+      grid-template-columns: repeat(10,30px);
+      grid-template-rows: repeat(10,30px);
       gap: 1px;
-      margin-top: 20px;
+      margin: auto;
+      width: max-content;
     }
-
     .cell {
-      width: 30px;
-      height: 30px;
-      background-color: #eee;
-      border: 1px solid #ccc;
+      width: 30px; height: 30px;
+      background: #eee; border:1px solid #ccc;
     }
-
-    .active {
-      background-color: #333;
+    .filled { background:#444 }
+    .red    { background:red!important }
+    /* Управление */
+    #controls {
+      position: relative;
+      width: 160px;  /* ширина контейнера */
+      height: 160px; /* высота контейнера */
+      margin: 20px auto 0;
     }
-
-    .controls {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .control-row {
-      display: flex;
-      gap: 10px;
-    }
-
-    .control-btn {
-      width: 50px;
-      height: 50px;
+    .btn {
+      position: absolute;
+      width: 50px; height: 50px;
       font-size: 24px;
-      border: none;
-      border-radius: 10px;
-      background-color: #f0f0f0;
+      background: #f0f0f0;
+      border: none; border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      transition: background-color 0.2s ease;
+      line-height: 50px;
+      user-select: none;
+      touch-action: manipulation;
     }
-
-    .control-btn:hover {
-      background-color: #e0e0e0;
-    }
-
-    .control-btn:active {
-      background-color: #ccc;
-    }
+    .btn:active { background: #ccc }
+    /* Расположение */
+    #btn-up    { top: 0;   left: 55px; }
+    #btn-down  { bottom:0; left: 55px; }
+    #btn-left  { top: 55px; left: 0;   }
+    #btn-right { top: 55px; right:0;   }
+    #btn-place { top: 55px; left: 55px; width:50px; height:50px; line-height:50px; }
+    #btn-rot   { top: 0;    right:0;   }
   </style>
 </head>
 <body>
-  <h1>Murka</h1>
-  <h2>Мини-Тетрис 10×10</h2>
-  <div>Время: <span id="timer">15</span></div>
 
-  <div class="container">
-    <div id="grid" class="grid"></div>
+  <h1>Мини‑Тетрис 10×10</h1>
+  <div id="timer">Время: <span id="time">15</span></div>
+  <div id="board"></div>
 
-    <div class="controls">
-      <div class="control-row">
-        <button class="control-btn" onclick="move('up')">↑</button>
-        <button class="control-btn" onclick="rotate()">⟳</button>
-      </div>
-      <div class="control-row">
-        <button class="control-btn" onclick="move('left')">←</button>
-        <button class="control-btn" disabled style="opacity:0;">•</button>
-        <button class="control-btn" onclick="move('right')">→</button>
-      </div>
-      <div>
-        <button class="control-btn" onclick="move('down')">↓</button>
-      </div>
-    </div>
+  <div id="controls">
+    <button id="btn-up"    class="btn" onclick="move('up')">↑</button>
+    <button id="btn-down"  class="btn" onclick="move('down')">↓</button>
+    <button id="btn-left"  class="btn" onclick="move('left')">←</button>
+    <button id="btn-right" class="btn" onclick="move('right')">→</button>
+    <button id="btn-place" class="btn" onclick="placeFigure()">•</button>
+    <button id="btn-rot"   class="btn" onclick="rotate()">⟳</button>
   </div>
 
   <script>
-    const grid = document.getElementById("grid");
-    const timerEl = document.getElementById("timer");
-    const gridSize = 10;
-    const cells = [];
+    const boardSize = 10,
+          boardEl = document.getElementById('board'),
+          timeEl  = document.getElementById('time');
+    let grid = Array.from({length:boardSize}, ()=>Array(boardSize).fill(0)),
+        figures = [
+          [[1,1],[1,1]],
+          [[1,1,1]],
+          [[1],[1],[1],[1]],
+          [[0,1,0],[1,1,1]],
+          [[1,0],[1,0],[1,1]]
+        ],
+        current, pos, timer, interval;
 
-    for (let i = 0; i < gridSize * gridSize; i++) {
-      const cell = document.createElement("div");
-      cell.classList.add("cell");
-      grid.appendChild(cell);
-      cells.push(cell);
+    // Создаём поле
+    for(let i=0;i<boardSize*boardSize;i++){
+      let c = document.createElement('div');
+      c.className='cell';
+      boardEl.appendChild(c);
     }
+    const cells = boardEl.children;
 
-    let currentBlock = [];
-    let timer = 15;
-    let timerInterval;
-
-    const figures = [
-      [0, 1, 10, 11], // квадрат
-      [0, 1, 2],      // палка
-      [0, 10, 20, 30],// палка вертикальная
-      [1, 10, 11, 12],// крест
-      [0, 1, 11, 21], // L-образная
-    ];
-
-    function getRandomFigure() {
-      const fig = figures[Math.floor(Math.random() * figures.length)];
-      const offset = Math.floor(Math.random() * (gridSize * (gridSize - 3)));
-      return fig.map(i => i + offset);
-    }
-
-    function drawBlock(block) {
-      block.forEach(i => {
-        if (cells[i]) cells[i].classList.add("active");
+    function draw(){
+      // очистка
+      grid.flat().forEach((v,i)=>{
+        cells[i].className = v?'cell filled':'cell';
+      });
+      // превью
+      current.forEach((row,y)=>{
+        row.forEach((v,x)=>{
+          if(v){
+            let ix = (pos.y+y)*boardSize + (pos.x+x);
+            if(ix>=0 && ix<cells.length){
+              cells[ix].classList.add(grid[pos.y+y][pos.x+x]?'red':'filled');
+            }
+          }
+        })
       });
     }
+    function clamp(v,m,M){return v<m?m:(v>M?M:v)}
 
-    function clearBlock(block) {
-      block.forEach(i => {
-        if (cells[i]) cells[i].classList.remove("active");
-      });
+    function move(dir){
+      pos = {x: pos.x + (dir=='left'? -1: dir=='right'?1:0),
+             y: pos.y + (dir=='up'? -1: dir=='down'?1:0)};
+      pos.x = clamp(pos.x,0,boardSize - current[0].length);
+      pos.y = clamp(pos.y,0,boardSize - current.length);
+      draw();
     }
-
-    function placeBlock() {
-      clearBlock(currentBlock);
-      currentBlock.forEach(i => {
-        if (cells[i]) cells[i].classList.add("active");
-      });
-      clearInterval(timerInterval);
-      startTimer(); // Запускаем таймер заново
-      currentBlock = getRandomFigure();
-      drawBlock(currentBlock);
+    function rotate(){
+      let R = current[0].map((_,i)=>current.map(r=>r[i]).reverse());
+      current = R;
+      pos.x = clamp(pos.x,0,boardSize - current[0].length);
+      pos.y = clamp(pos.y,0,boardSize - current.length);
+      draw();
     }
-
-    function move(direction) {
-      clearBlock(currentBlock);
-      let offset = 0;
-
-      switch (direction) {
-        case 'up': offset = -gridSize; break;
-        case 'down': offset = gridSize; break;
-        case 'left': offset = -1; break;
-        case 'right': offset = 1; break;
-      }
-
-      const newBlock = currentBlock.map(i => i + offset);
-      if (newBlock.every(i => i >= 0 && i < gridSize * gridSize)) {
-        currentBlock = newBlock;
-      }
-
-      drawBlock(currentBlock);
+    function placeFigure(){
+      // если конфликт, не ставить
+      let ok = true;
+      current.forEach((row,y)=> row.forEach((v,x)=>{
+        if(v && grid[pos.y+y][pos.x+x]) ok=false;
+      }));
+      if(!ok) return;
+      current.forEach((row,y)=> row.forEach((v,x)=>{
+        if(v) grid[pos.y+y][pos.x+x]=1;
+      }));
+      clearLines(); newFigure();
     }
-
-    function rotate() {
-      // простая псевдо-ротация: новая фигура
-      placeBlock();
-    }
-
-    function startTimer() {
-      timer = 15;
-      timerEl.textContent = timer;
-      timerInterval = setInterval(() => {
-        timer--;
-        timerEl.textContent = timer;
-        if (timer <= 0) {
-          clearInterval(timerInterval);
-          autoPlace();
+    function clearLines(){
+      // горизонтали
+      for(let y=0;y<boardSize;y++){
+        if(grid[y].every(c=>c)){
+          grid[y].fill(0);
         }
-      }, 1000);
+      }
+      // вертикали
+      for(let x=0;x<boardSize;x++){
+        if(grid.every(r=>r[x])){
+          grid.forEach(r=>r[x]=0);
+        }
+      }
+    }
+    function newFigure(){
+      clearInterval(interval);
+      timer=15; timeEl.textContent=timer;
+      current = figures[Math.floor(Math.random()*figures.length)]
+        .map(r=>[...r]);
+      pos = {x:Math.floor((boardSize-current[0].length)/2), y:Math.floor((boardSize-current.length)/2)};
+      draw();
+      interval = setInterval(()=>{
+        if(--timer<=0){
+          clearInterval(interval);
+          placeRandom();
+        }
+        timeEl.textContent=timer;
+      },1000);
+    }
+    function placeRandom(){
+      // искать все возможные
+      let opts=[];
+      for(let y=0;y<=boardSize-current.length;y++){
+        for(let x=0;x<=boardSize-current[0].length;x++){
+          pos={x,y};
+          let clash=false;
+          current.forEach((r,dy)=>r.forEach((v,dx)=>{
+            if(v && grid[y+dy][x+dx]) clash=true;
+          }));
+          if(!clash) opts.push({x,y});
+        }
+      }
+      if(opts.length){
+        let s=opts[Math.floor(Math.random()*opts.length)];
+        pos=s; placeFigure();
+      } else newFigure();
     }
 
-    function autoPlace() {
-      clearBlock(currentBlock);
-      currentBlock = getRandomFigure();
-      drawBlock(currentBlock);
-      startTimer();
-    }
-
-    // старт игры
-    currentBlock = getRandomFigure();
-    drawBlock(currentBlock);
-    startTimer();
+    // старт
+    newFigure();
   </script>
 </body>
 </html>
