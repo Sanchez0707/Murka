@@ -2,192 +2,206 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Мини‑Тетрис 10×10</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"/>
+  <title>Мини-Тетрис 10×10 (Обновлённый)</title>
   <style>
     body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       margin: 20px;
-      font-family: Arial, sans-serif;
-      text-align: center;
-    }
-    #timer {
-      font-size: 20px;
-      margin-bottom: 10px;
-    }
-    #board {
-      display: grid;
-      grid-template-columns: repeat(10,30px);
-      grid-template-rows: repeat(10,30px);
-      gap: 1px;
-      margin: auto;
-      width: max-content;
-    }
-    .cell {
-      width: 30px; height: 30px;
-      background: #eee; border:1px solid #ccc;
-    }
-    .filled { background:#444 }
-    .red    { background:red!important }
-    /* Управление */
-    #controls {
-      position: relative;
-      width: 160px;  /* ширина контейнера */
-      height: 160px; /* высота контейнера */
-      margin: 20px auto 0;
-    }
-    .btn {
-      position: absolute;
-      width: 50px; height: 50px;
-      font-size: 24px;
-      background: #f0f0f0;
-      border: none; border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      line-height: 50px;
       user-select: none;
       touch-action: manipulation;
     }
-    .btn:active { background: #ccc }
-    /* Расположение */
-    #btn-up    { top: 0;   left: 55px; }
-    #btn-down  { bottom:0; left: 55px; }
-    #btn-left  { top: 55px; left: 0;   }
-    #btn-right { top: 55px; right:0;   }
-    #btn-place { top: 55px; left: 55px; width:50px; height:50px; line-height:50px; }
-    #btn-rot   { top: 0;    right:0;   }
+    #container {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(10, 30px);
+      grid-template-rows: repeat(10, 30px);
+      gap: 1px;
+      margin-bottom: 15px;
+    }
+    .cell {
+      width: 30px;
+      height: 30px;
+      background: #eee;
+      border: 1px solid #ccc;
+    }
+    .filled { background: #444; }
+    .red { background: red !important; }
+    .controls {
+      display: grid;
+      grid-template-columns: 30px 30px 30px;
+      grid-template-rows: 30px 30px 30px;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .controls button {
+      padding: 0;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .center {
+      background: none;
+      border: none;
+    }
+    #scoreDisplay {
+      margin-left: 20px;
+      font-size: 18px;
+    }
   </style>
 </head>
 <body>
 
-  <h1>Мини‑Тетрис 10×10</h1>
-  <div id="timer">Время: <span id="time">15</span></div>
-  <div id="board"></div>
+  <h2>Мини-Тетрис 10×10</h2>
 
-  <div id="controls">
-    <button id="btn-up"    class="btn" onclick="move('up')">↑</button>
-    <button id="btn-down"  class="btn" onclick="move('down')">↓</button>
-    <button id="btn-left"  class="btn" onclick="move('left')">←</button>
-    <button id="btn-right" class="btn" onclick="move('right')">→</button>
-    <button id="btn-place" class="btn" onclick="placeFigure()">•</button>
-    <button id="btn-rot"   class="btn" onclick="rotate()">⟳</button>
+  <div id="container">
+    <div>
+      <div id="board"></div>
+      <div class="controls" style="margin-top: 10px;">
+        <button onclick="move('up')">↑</button>
+        <div class="center"></div>
+        <button onclick="rotate()">⟳</button>
+        <button onclick="move('left')">←</button>
+        <button onclick="placeFigure()">•</button>
+        <button onclick="move('right')">→</button>
+        <div class="center"></div>
+        <button onclick="move('down')">↓</button>
+        <div class="center"></div>
+      </div>
+    </div>
+    <div id="scoreDisplay">
+      <h3>Счёт: <span id="score">0</span></h3>
+    </div>
   </div>
 
   <script>
-    const boardSize = 10,
-          boardEl = document.getElementById('board'),
-          timeEl  = document.getElementById('time');
-    let grid = Array.from({length:boardSize}, ()=>Array(boardSize).fill(0)),
-        figures = [
-          [[1,1],[1,1]],
-          [[1,1,1]],
-          [[1],[1],[1],[1]],
-          [[0,1,0],[1,1,1]],
-          [[1,0],[1,0],[1,1]]
-        ],
-        current, pos, timer, interval;
+    const boardSize = 10;
+    const boardEl = document.getElementById('board');
+    const scoreEl = document.getElementById('score');
+    const grid = Array.from({ length: boardSize }, () => Array(boardSize).fill(0));
+    let currentFigure, pos = { x: 3, y: 3 };
+    let score = 0;
 
-    // Создаём поле
-    for(let i=0;i<boardSize*boardSize;i++){
-      let c = document.createElement('div');
-      c.className='cell';
-      boardEl.appendChild(c);
+    const shapes = [
+      [[1,1],[1,1]],               
+      [[1,1,1]],                   
+      [[1],[1],[1],[1]],           
+      [[0,1,0],[1,1,1]],           
+      [[1,0],[1,0],[1,1]]          
+    ];
+
+    function createBoard() {
+      for (let i = 0; i < boardSize * boardSize; i++) {
+        const div = document.createElement('div');
+        div.classList.add('cell');
+        boardEl.appendChild(div);
+      }
     }
-    const cells = boardEl.children;
 
-    function draw(){
-      // очистка
-      grid.flat().forEach((v,i)=>{
-        cells[i].className = v?'cell filled':'cell';
+    function drawBoard() {
+      const cells = boardEl.children;
+      grid.flat().forEach((val, idx) => {
+        cells[idx].className = val ? 'cell filled' : 'cell';
       });
-      // превью
-      current.forEach((row,y)=>{
-        row.forEach((v,x)=>{
-          if(v){
-            let ix = (pos.y+y)*boardSize + (pos.x+x);
-            if(ix>=0 && ix<cells.length){
-              cells[ix].classList.add(grid[pos.y+y][pos.x+x]?'red':'filled');
-            }
+      previewFigure();
+    }
+
+    function clamp(val, min, max) {
+      return Math.max(min, Math.min(max, val));
+    }
+
+    function previewFigure() {
+      const cells = boardEl.children;
+      const { x, y } = pos;
+      let conflict = false;
+
+      currentFigure.forEach((row, dy) => {
+        row.forEach((val, dx) => {
+          if (!val) return;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || nx >= boardSize || ny < 0 || ny >= boardSize) {
+            conflict = true;
+            return;
           }
-        })
+          const idx = ny * boardSize + nx;
+          cells[idx].classList.add(grid[ny][nx] ? 'red' : 'filled');
+          if (grid[ny][nx]) conflict = true;
+        });
       });
-    }
-    function clamp(v,m,M){return v<m?m:(v>M?M:v)}
 
-    function move(dir){
-      pos = {x: pos.x + (dir=='left'? -1: dir=='right'?1:0),
-             y: pos.y + (dir=='up'? -1: dir=='down'?1:0)};
-      pos.x = clamp(pos.x,0,boardSize - current[0].length);
-      pos.y = clamp(pos.y,0,boardSize - current.length);
-      draw();
+      return !conflict;
     }
-    function rotate(){
-      let R = current[0].map((_,i)=>current.map(r=>r[i]).reverse());
-      current = R;
-      pos.x = clamp(pos.x,0,boardSize - current[0].length);
-      pos.y = clamp(pos.y,0,boardSize - current.length);
-      draw();
+
+    function move(dir) {
+      let { x, y } = pos;
+      if (dir === 'left') x--;
+      if (dir === 'right') x++;
+      if (dir === 'up') y--;
+      if (dir === 'down') y++;
+      pos.x = clamp(x, 0, boardSize - 1);
+      pos.y = clamp(y, 0, boardSize - 1);
+      drawBoard();
     }
-    function placeFigure(){
-      // если конфликт, не ставить
-      let ok = true;
-      current.forEach((row,y)=> row.forEach((v,x)=>{
-        if(v && grid[pos.y+y][pos.x+x]) ok=false;
-      }));
-      if(!ok) return;
-      current.forEach((row,y)=> row.forEach((v,x)=>{
-        if(v) grid[pos.y+y][pos.x+x]=1;
-      }));
-      clearLines(); newFigure();
+
+    function rotate() {
+      const rotated = currentFigure[0].map((_, i) =>
+        currentFigure.map(r => r[i]).reverse()
+      );
+      currentFigure = rotated;
+      pos.x = clamp(pos.x, 0, boardSize - currentFigure[0].length);
+      pos.y = clamp(pos.y, 0, boardSize - currentFigure.length);
+      drawBoard();
     }
-    function clearLines(){
-      // горизонтали
-      for(let y=0;y<boardSize;y++){
-        if(grid[y].every(c=>c)){
+
+    function placeFigure() {
+      if (!previewFigure()) return;
+      currentFigure.forEach((row, dy) => {
+        row.forEach((val, dx) => {
+          if (val) grid[pos.y + dy][pos.x + dx] = 1;
+        });
+      });
+      clearLines();
+      spawnNew();
+      drawBoard();
+    }
+
+    function clearLines() {
+      let cleared = 0;
+
+      for (let y = 0; y < boardSize; y++) {
+        if (grid[y].every(v => v)) {
           grid[y].fill(0);
+          cleared++;
         }
       }
-      // вертикали
-      for(let x=0;x<boardSize;x++){
-        if(grid.every(r=>r[x])){
-          grid.forEach(r=>r[x]=0);
+
+      for (let x = 0; x < boardSize; x++) {
+        if (grid.every(row => row[x])) {
+          grid.forEach(row => row[x] = 0);
+          cleared++;
         }
       }
-    }
-    function newFigure(){
-      clearInterval(interval);
-      timer=15; timeEl.textContent=timer;
-      current = figures[Math.floor(Math.random()*figures.length)]
-        .map(r=>[...r]);
-      pos = {x:Math.floor((boardSize-current[0].length)/2), y:Math.floor((boardSize-current.length)/2)};
-      draw();
-      interval = setInterval(()=>{
-        if(--timer<=0){
-          clearInterval(interval);
-          placeRandom();
-        }
-        timeEl.textContent=timer;
-      },1000);
-    }
-    function placeRandom(){
-      // искать все возможные
-      let opts=[];
-      for(let y=0;y<=boardSize-current.length;y++){
-        for(let x=0;x<=boardSize-current[0].length;x++){
-          pos={x,y};
-          let clash=false;
-          current.forEach((r,dy)=>r.forEach((v,dx)=>{
-            if(v && grid[y+dy][x+dx]) clash=true;
-          }));
-          if(!clash) opts.push({x,y});
-        }
+
+      if (cleared > 0) {
+        score += cleared * 10;
+        scoreEl.textContent = score;
       }
-      if(opts.length){
-        let s=opts[Math.floor(Math.random()*opts.length)];
-        pos=s; placeFigure();
-      } else newFigure();
     }
 
-    // старт
-    newFigure();
+    function spawnNew() {
+      currentFigure = shapes[Math.floor(Math.random() * shapes.length)].map(row => [...row]);
+      pos = { x: 3, y: 3 };
+    }
+
+    createBoard();
+    spawnNew();
+    drawBoard();
   </script>
 </body>
 </html>
