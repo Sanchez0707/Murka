@@ -14,8 +14,8 @@
       display:flex; justify-content:space-between; align-items:center;
       max-width:400px; margin:auto; padding:0 10px;
     }
-    #score-box { font-size:18px }
-    #restart { padding:5px 10px; cursor:pointer }
+    #score-box, #best-box { font-size:18px }
+    #restart, #btn-music { padding:5px 10px; cursor:pointer; margin-left:5px }
     #board {
       display:grid;
       grid-template-columns:repeat(10,30px);
@@ -28,17 +28,14 @@
       background: #eee; border: 1px solid #ccc;
       overflow: hidden;
     }
-    /* Плавное появление/движение блока */
     .block {
       position: absolute; width:100%; height:100%;
-      background: #333;
-      transition: top 0.1s ease;
+      background: #333; transition: top 0.1s ease;
     }
     .ghost {
       position:absolute; width:100%; height:100%;
       background: rgba(50,50,50,0.75);
     }
-    /* Анимация очистки линии */
     @keyframes clear-line {
       0%   { opacity: 1; }
       50%  { opacity: 0; }
@@ -63,8 +60,15 @@
 
   <h1>Тетрис</h1>
   <div id="top-bar">
-    <button id="restart">Заново</button>
-    <div id="score-box">Очки: 0</div>
+    <div>
+      <button id="restart">Заново</button>
+      <button id="btn-music">Музыка: Вкл</button>
+    </div>
+    <div>
+      <span id="score-box">Очки: 0</span>
+      &nbsp;|&nbsp;
+      <span id="best-box">Лучший: 0</span>
+    </div>
   </div>
 
   <div id="board"></div>
@@ -78,15 +82,22 @@
 
   <footer>Я не пытаюсь кого-либо плагиатить</footer>
 
+  <!-- Фоновая музыка -->
+  <audio id="bg-music" loop>
+    <source src="Video_Game_Players_-_Tetris_Theme_48152782.mp3" type="audio/mpeg">
+  </audio>
+
 <script>
   const COLS = 10, ROWS = 16;
   let dropInt, score = 0;
-
   const board = document.getElementById('board');
   const scoreBox = document.getElementById('score-box');
+  const bestBox = document.getElementById('best-box');
   const restart = document.getElementById('restart');
+  const musicBtn = document.getElementById('btn-music');
+  const bgMusic = document.getElementById('bg-music');
 
-  // создаём ячейки
+  // Инициализация доски
   for (let i = 0; i < COLS * ROWS; i++) {
     const c = document.createElement('div');
     c.className = 'cell';
@@ -94,19 +105,23 @@
   }
   const cells = board.children;
 
-  // Фигуры: I, O, T, L, зеркальный L, 3‑блочный, 2‑блочный, маленькое L
+  // Фигуры
   const SHAPES = [
-    [[1,1,1,1]],         // I
-    [[1,1],[1,1]],       // O
-    [[0,1,0],[1,1,1]],   // T
-    [[1,0,0],[1,1,1]],   // L
-    [[0,0,1],[1,1,1]],   // зеркальный L
-    [[1,1,1]],           // длина 3
-    [[1,1]],             // длина 2
-    [[1,0],[1,1]]        // маленькое L
+    [[1,1,1,1]],
+    [[1,1],[1,1]],
+    [[0,1,0],[1,1,1]],
+    [[1,0,0],[1,1,1]],
+    [[0,0,1],[1,1,1]],
+    [[1,1,1]],
+    [[1,1]],
+    [[1,0],[1,1]]
   ];
 
   let grid, current, pos;
+
+  // Загрузка сохранённого лучшего счета
+  let best = parseInt(localStorage.getItem('tetrisBest')) || 0;
+  bestBox.textContent = 'Лучший: ' + best;
 
   function resetGame() {
     clearInterval(dropInt);
@@ -124,6 +139,11 @@
     if (collide(pos.x,pos.y)) {
       clearInterval(dropInt);
       alert('Игра окончена!');
+      if (score > best) {
+        best = score;
+        localStorage.setItem('tetrisBest', best);
+        bestBox.textContent = 'Лучший: ' + best;
+      }
     }
   }
 
@@ -140,13 +160,11 @@
   }
 
   function draw() {
-    // Сбрасываем анимацию очистки у всех ячеек
+    // Сбрасываем анимацию очистки
     Array.from(cells).forEach(c => c.classList.remove('clearing'));
-
-    // Очищаем всё содержимое
+    // Очищаем
     grid.flat().forEach((v,i)=> cells[i].innerHTML='');
-
-    // Рисуем зафиксированные блоки
+    // Рисуем зафиксированные
     grid.forEach((row,y)=>row.forEach((v,x)=>{
       if (v) {
         const div = document.createElement('div');
@@ -155,15 +173,13 @@
         cells[y*COLS+x].appendChild(div);
       }
     }));
-
-    // Ghost-фигура
+    // Ghost
     let gy = pos.y;
     while(!collide(pos.x,gy+1)) gy++;
     current.forEach((r,ry)=>r.forEach((v,rx)=>{
       if(v) cells[(gy+ry)*COLS + pos.x+rx].innerHTML = '<div class="ghost"></div>';
     }));
-
-    // Текущая фигура
+    // Current
     current.forEach((r,ry)=>r.forEach((v,rx)=>{
       if(v) {
         const div = document.createElement('div');
@@ -176,36 +192,28 @@
 
   function clearLines() {
     const lines = [];
-    // Находим полные линии
     for (let y = ROWS - 1; y >= 0; y--) {
-      if (grid[y].every(v => v)) {
-        lines.push(y);
-      }
+      if (grid[y].every(v => v)) lines.push(y);
     }
     if (!lines.length) return;
-
-    // Мигание линий
+    // Мигание
     lines.forEach(y => {
       for (let x = 0; x < COLS; x++) {
-        const idx = y * COLS + x;
-        cells[idx].classList.add('clearing');
+        cells[y*COLS + x].classList.add('clearing');
       }
     });
-
     setTimeout(() => {
-      // Удаляем линии и считаем очки
       const count = lines.length;
-      lines.forEach(y => {
-        grid.splice(y, 1);
+      lines.sort((a,b)=>a-b).forEach((y,i) => {
+        grid.splice(y-i, 1);
         grid.unshift(Array(COLS).fill(0));
       });
+      // Подсчет очков
       if (count === 1) score += 10;
       else if (count === 2) score += 50;
       else if (count === 3) score += 200;
       else score += 200;
       scoreBox.textContent = 'Очки: ' + score;
-
-      // Перерисовываем поле
       draw();
     }, 350);
   }
@@ -247,8 +255,29 @@
     }
     draw();
   });
+
+  // Кнопка рестарта
   restart.addEventListener('mousedown', ()=> resetGame());
 
+  // Кнопка управления музыкой
+  let musicOn = true;
+  musicBtn.addEventListener('click', () => {
+    musicOn = !musicOn;
+    if (musicOn) {
+      bgMusic.play();
+      musicBtn.textContent = 'Музыка: Вкл';
+    } else {
+      bgMusic.pause();
+      musicBtn.textContent = 'Музыка: Выкл';
+    }
+  });
+
+  // Автостарт музыки (по клику страницы, чтобы обойти блокировки браузера)
+  document.body.addEventListener('click', () => {
+    if (musicOn && bgMusic.paused) bgMusic.play();
+  }, { once: true });
+
+  // Старт игры
   resetGame();
 </script>
 
