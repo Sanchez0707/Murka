@@ -29,36 +29,33 @@
       background: #333; color: #fafafa; border: none; border-radius: 4px;
       margin: 5px;
     }
-    #game-container {
-      display: flex; justify-content: center; align-items: flex-start;
-      gap: 20px; flex-wrap: wrap; margin-top: 10px;
-    }
     #board {
       display: grid;
       grid-template-columns: repeat(10, 30px);
       grid-template-rows: repeat(16, 30px);
       gap: 1px; background: #444;
+      margin: 10px auto; width: calc(10 * 30px + 9px);
     }
     .cell {
-      width:30px; height:30px; background:#eee; position:relative;
+      width: 30px; height: 30px; background: #eee; position: relative;
     }
     .block {
-      position:absolute; width:100%; height:100%; background:#333;
+      position: absolute; width: 100%; height: 100%; background: #333;
     }
     .ghost {
-      position:absolute; width:100%; height:100%; background:rgba(0,0,0,0.4);
+      position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.4);
     }
     #controls {
       margin-top: 15px;
     }
     #controls button {
-      width:50px; height:50px; font-size:24px; margin:5px;
-      background:#555; color:#fafafa; border:none; border-radius:4px;
-      cursor:pointer;
+      width: 50px; height: 50px; font-size: 24px; margin: 5px;
+      background: #555; color: #fafafa; border: none; border-radius: 4px;
+      cursor: pointer;
     }
-    #controls button:active { background:#777 }
+    #controls button:active { background: #777 }
     footer {
-      margin-top:20px; font-size:12px; color:#888;
+      margin-top: 20px; font-size: 12px; color: #888;
     }
   </style>
 </head>
@@ -78,9 +75,7 @@
     <button id="music-toggle">Музыка</button>
   </div>
 
-  <div id="game-container">
-    <div id="board"></div>
-  </div>
+  <div id="board"></div>
 
   <div id="controls">
     <button onclick="moveLeft()">←</button>
@@ -91,148 +86,127 @@
 
   <footer>Я не пытаюсь кого-либо плагиатить</footer>
 
+  <!-- Прямая ссылка на твой трек с Google Drive: -->
   <audio id="bgm" loop>
-    <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_4ac093ee98.mp3?filename=relaxing-ambient-12692.mp3" type="audio/mpeg">
+    <source src="https://docs.google.com/uc?export=download&id=1zXfbzzaLJLNlEsIAy3DvWpIJQCyFNo5t" type="audio/mpeg">
   </audio>
 
-<script>
-  const COLS = 10, ROWS = 16;
-  const boardEl = document.getElementById('board');
-  const scoreBox = document.getElementById('score-box');
-  const restartBtn = document.getElementById('restart');
-  const speedSelect = document.getElementById('speed-select');
-  const musicToggle = document.getElementById('music-toggle');
-  const bgm = document.getElementById('bgm');
+  <script>
+    const COLS=10, ROWS=16;
+    const boardEl=document.getElementById('board');
+    const scoreBox=document.getElementById('score-box');
+    const restartBtn=document.getElementById('restart');
+    const speedSelect=document.getElementById('speed-select');
+    const musicToggle=document.getElementById('music-toggle');
+    const bgm=document.getElementById('bgm');
 
-  let grid, current, pos, score = 0, intervalId;
+    let grid, current, pos, score=0, intervalId;
 
-  const SHAPES = [
-    [[1,1,1,1]],
-    [[1,1],[1,1]],
-    [[0,1,0],[1,1,1]],
-    [[1,0,0],[1,1,1]],
-    [[1,1,1]],
-    [[1,1]],
-    [[1,0],[1,1]]
-  ];
+    const SHAPES=[
+      [[1,1,1,1]],
+      [[1,1],[1,1]],
+      [[0,1,0],[1,1,1]],
+      [[1,0,0],[1,1,1]],
+      [[1,1,1]],
+      [[1,1]],
+      [[1,0],[1,1]]
+    ];
 
-  // Инициализация поля
-  for (let i = 0; i < COLS * ROWS; i++) {
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    boardEl.appendChild(cell);
-  }
-  const cells = boardEl.children;
-
-  function resetGame() {
-    clearInterval(intervalId);
-    grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-    score = 0; scoreBox.textContent = 'Очки: 0';
-    spawnFigure(); draw();
-    intervalId = setInterval(gameTick, parseInt(speedSelect.value));
-  }
-
-  function spawnFigure() {
-    const s = SHAPES[Math.floor(Math.random() * SHAPES.length)];
-    current = s.map(r => [...r]);
-    pos = { x: Math.floor((COLS - current[0].length) / 2), y: 0 };
-    if (hasCollision(pos.x, pos.y)) {
-      clearInterval(intervalId);
-      alert('Игра окончена!');
+    // Инициализация поля
+    for(let i=0;i<COLS*ROWS;i++){
+      const c=document.createElement('div');
+      c.className='cell';
+      boardEl.appendChild(c);
     }
-  }
+    const cells=boardEl.children;
 
-  function hasCollision(px, py, fig = current) {
-    for (let y = 0; y < fig.length; y++) {
-      for (let x = 0; x < fig[0].length; x++) {
-        if (fig[y][x]) {
-          const nx = px + x, ny = py + y;
-          if (nx < 0 || nx >= COLS || ny >= ROWS || grid[ny][nx]) return true;
+    function resetGame(){
+      clearInterval(intervalId);
+      grid=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+      score=0; scoreBox.textContent='Очки: 0';
+      spawnFigure(); draw();
+      intervalId=setInterval(gameTick, parseInt(speedSelect.value));
+    }
+
+    function spawnFigure(){
+      const s=SHAPES[Math.floor(Math.random()*SHAPES.length)];
+      current=s.map(r=>[...r]);
+      pos={ x:Math.floor((COLS-current[0].length)/2), y:0 };
+      if(collide(pos.x,pos.y)){ clearInterval(intervalId); alert('Игра окончена!'); }
+    }
+
+    function collide(px,py,fig=current){
+      for(let y=0;y<fig.length;y++){
+        for(let x=0;x<fig[0].length;x++){
+          if(fig[y][x]){
+            const nx=px+x, ny=py+y;
+            if(nx<0||nx>=COLS||ny>=ROWS||grid[ny][nx]) return true;
+          }
         }
       }
+      return false;
     }
-    return false;
-  }
 
-  function draw() {
-    // Очистить поле
-    grid.flat().forEach((v, i) => cells[i].innerHTML = '');
-    // Рисуем зафиксированные блоки
-    grid.forEach((row, y) => {
-      row.forEach((v, x) => {
-        if (v) cells[y * COLS + x].innerHTML = '<div class="block"></div>';
-      });
-    });
-    // Рисуем ghost
-    let gy = pos.y;
-    while (!hasCollision(pos.x, gy + 1)) gy++;
-    current.forEach((r, ry) => {
-      r.forEach((v, rx) => {
-        if (v) cells[(gy + ry) * COLS + pos.x + rx].innerHTML = '<div class="ghost"></div>';
-      });
-    });
-    // Рисуем текущую фигуру
-    current.forEach((r, ry) => {
-      r.forEach((v, rx) => {
-        if (v) cells[(pos.y + ry) * COLS + pos.x + rx].innerHTML = '<div class="block"></div>';
-      });
-    });
-  }
+    function draw(){
+      grid.flat().forEach((v,i)=>cells[i].innerHTML='');
+      grid.forEach((row,y)=>row.forEach((v,x)=>{
+        if(v) cells[y*COLS+x].innerHTML='<div class="block"></div>';
+      }));
+      let gy=pos.y;
+      while(!collide(pos.x,gy+1)) gy++;
+      current.forEach((r,ry)=>r.forEach((v,rx)=>{
+        if(v) cells[(gy+ry)*COLS+pos.x+rx].innerHTML='<div class="ghost"></div>';
+      }));
+      current.forEach((r,ry)=>r.forEach((v,rx)=>{
+        if(v) cells[(pos.y+ry)*COLS+pos.x+rx].innerHTML='<div class="block"></div>';
+      }));
+    }
 
-  function clearLines() {
-    let lines = 0;
-    for (let y = ROWS - 1; y >= 0; y--) {
-      if (grid[y].every(v => v)) {
-        grid.splice(y, 1);
-        grid.unshift(Array(COLS).fill(0));
-        lines++; y++;
+    function clearLines(){
+      let lines=0;
+      for(let y=ROWS-1;y>=0;y--){
+        if(grid[y].every(c=>c)){
+          grid.splice(y,1);
+          grid.unshift(Array(COLS).fill(0));
+          lines++; y++;
+        }
       }
+      if(lines){ score+=lines*10; scoreBox.textContent='Очки: '+score; }
     }
-    if (lines) {
-      score += lines * 10;
-      scoreBox.textContent = 'Очки: ' + score;
+
+    function gameTick(){
+      if(!collide(pos.x,pos.y+1)) pos.y++;
+      else {
+        current.forEach((r,ry)=>r.forEach((v,rx)=>{
+          if(v) grid[pos.y+ry][pos.x+rx]=1;
+        }));
+        clearLines(); spawnFigure();
+      }
+      draw();
     }
-  }
 
-  function gameTick() {
-    if (!hasCollision(pos.x, pos.y + 1)) {
-      pos.y++;
-    } else {
-      current.forEach((r, ry) =>
-        r.forEach((v, rx) => {
-          if (v) grid[pos.y + ry][pos.x + rx] = 1;
-        })
-      );
-      clearLines();
-      spawnFigure();
+    function moveLeft(){ if(!collide(pos.x-1,pos.y)) pos.x--; draw(); }
+    function moveRight(){ if(!collide(pos.x+1,pos.y)) pos.x++; draw(); }
+    function rotate(){
+      const R=current[0].map((_,i)=>current.map(r=>r[i]).reverse());
+      if(!collide(pos.x,pos.y,R)) current=R;
+      draw();
     }
-    draw();
-  }
+    function softDrop(){ for(let i=0;i<3;i++){ if(!collide(pos.x,pos.y+1)) pos.y++; } draw(); }
 
-  // Управление
-  function moveLeft() { if (!hasCollision(pos.x - 1, pos.y)) pos.x--; draw(); }
-  function moveRight() { if (!hasCollision(pos.x + 1, pos.y)) pos.x++; draw(); }
-  function rotate() {
-    const R = current[0].map((_, i) => current.map(r => r[i]).reverse());
-    if (!hasCollision(pos.x, pos.y, R)) current = R;
-    draw();
-  }
-  function softDrop() { for (let i = 0; i < 3; i++) { if (!hasCollision(pos.x, pos.y + 1)) pos.y++; } draw(); }
+    // События
+    restartBtn.addEventListener('click', resetGame);
+    speedSelect.addEventListener('change', ()=>{
+      clearInterval(intervalId);
+      intervalId=setInterval(gameTick, parseInt(speedSelect.value));
+    });
+    musicToggle.addEventListener('click', ()=>{
+      bgm.paused ? bgm.play() : bgm.pause();
+    });
 
-  // Кнопки и события
-  restartBtn.addEventListener('click', resetGame);
-  speedSelect.addEventListener('change', () => {
-    clearInterval(intervalId);
-    intervalId = setInterval(gameTick, parseInt(speedSelect.value));
-  });
-  musicToggle.addEventListener('click', () => {
-    bgm.paused ? bgm.play() : bgm.pause();
-  });
-
-  // Старт игры
-  resetGame();
-  bgm.play();
-</script>
-
+    // Начало игры
+    resetGame();
+    bgm.play();
+  </script>
 </body>
 </html>
