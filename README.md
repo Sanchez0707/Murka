@@ -5,35 +5,65 @@
   <title>Тетрис</title>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
   <style>
-    body { margin:0; padding:0; background:#222; color:#fafafa;
-      font-family:Arial,sans-serif; text-align:center;
+    body {
+      margin:0; padding:0;
+      background:#222; color:#fafafa;
+      font-family:Arial,sans-serif;
+      text-align:center;
       user-select:none; touch-action:manipulation;
     }
     h1 { margin:10px 0; }
+
+    /* Верхняя панель */
     #top-bar {
-      display:flex; justify-content:space-between; align-items:center;
-      max-width:400px; margin:auto; padding:0 10px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      max-width:400px;
+      margin: auto;
+      padding: 0 10px;
     }
-    #score-box, #best-box { font-size:18px }
-    #restart, #btn-music { padding:5px 10px; cursor:pointer; margin-left:5px }
+    #top-bar button {
+      padding:5px 10px;
+      cursor:pointer;
+      background:#555;
+      color:#fafafa;
+      border:none;
+      border-radius:4px;
+    }
+    #top-bar button:active {
+      background:#777;
+    }
+    #score-box, #best-box {
+      font-size:18px;
+    }
+
+    /* Поле */
     #board {
       display:grid;
       grid-template-columns:repeat(10,30px);
       grid-template-rows:repeat(16,30px);
-      gap:1px; background:#444;
-      margin:10px auto; width:calc(10*30px+9px);
+      gap:1px;
+      background:#444;
+      margin:10px auto;
+      width:calc(10*30px+9px);
     }
     .cell {
-      position: relative; width: 30px; height: 30px;
-      background: #eee; border: 1px solid #ccc;
+      position: relative;
+      width: 30px; height: 30px;
+      background: #eee;
+      border: 1px solid #ccc;
       overflow: hidden;
     }
     .block {
-      position: absolute; width:100%; height:100%;
-      background: #333; transition: top 0.1s ease;
+      position: absolute;
+      width:100%; height:100%;
+      background: #333;
+      transition: top 0.1s ease;
     }
     .ghost {
-      position:absolute; width:100%; height:100%;
+      position:absolute;
+      width:100%; height:100%;
       background: rgba(50,50,50,0.75);
     }
     @keyframes clear-line {
@@ -44,31 +74,46 @@
     .clearing .block {
       animation: clear-line 0.3s ease-in-out 2;
     }
+
+    /* Кнопки управления */
     #controls {
-      display:flex; justify-content:center; gap:10px; margin:15px 0;
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      margin:15px 0;
     }
     #controls button {
-      width:50px; height:50px; font-size:24px;
-      background:#555; color:#fafafa; border:none; border-radius:4px;
+      width:50px; height:50px;
+      font-size:24px;
+      background:#555; color:#fafafa;
+      border:none; border-radius:4px;
       cursor:pointer;
     }
-    #controls button:active { background:#777 }
-    footer { margin:20px 0; font-size:12px; color:#888 }
+    #controls button:active {
+      background:#777;
+    }
+
+    footer {
+      margin:20px 0;
+      font-size:12px;
+      color:#888;
+    }
   </style>
 </head>
 <body>
 
   <h1>Тетрис</h1>
   <div id="top-bar">
-    <div>
-      <button id="restart">Заново</button>
-      <button id="btn-music">Музыка: Вкл</button>
-    </div>
+    <!-- Слева: рестарт -->
+    <button id="restart">Заново</button>
+    <!-- Центр: счёт | лучший -->
     <div>
       <span id="score-box">Очки: 0</span>
       &nbsp;|&nbsp;
       <span id="best-box">Лучший: 0</span>
     </div>
+    <!-- Справа: музыка -->
+    <button id="btn-music">Музыка: Вкл</button>
   </div>
 
   <div id="board"></div>
@@ -83,7 +128,7 @@
   <footer>Я не пытаюсь кого-либо плагиатить</footer>
 
   <!-- Фоновая музыка -->
-  <audio id="bg-music" loop>
+  <audio id="bg-music" loop preload="auto">
     <source src="Video_Game_Players_-_Tetris_Theme_48152782.mp3" type="audio/mpeg">
   </audio>
 
@@ -119,7 +164,7 @@
 
   let grid, current, pos;
 
-  // Загрузка сохранённого лучшего счета
+  // Загрузка лучшего счёта
   let best = parseInt(localStorage.getItem('tetrisBest')) || 0;
   bestBox.textContent = 'Лучший: ' + best;
 
@@ -160,11 +205,11 @@
   }
 
   function draw() {
-    // Сбрасываем анимацию очистки
+    // Сбрасываем очистку
     Array.from(cells).forEach(c => c.classList.remove('clearing'));
-    // Очищаем
+    // Очищаем поле
     grid.flat().forEach((v,i)=> cells[i].innerHTML='');
-    // Рисуем зафиксированные
+    // Рисуем зафиксированные блоки
     grid.forEach((row,y)=>row.forEach((v,x)=>{
       if (v) {
         const div = document.createElement('div');
@@ -208,7 +253,6 @@
         grid.splice(y-i, 1);
         grid.unshift(Array(COLS).fill(0));
       });
-      // Подсчет очков
       if (count === 1) score += 10;
       else if (count === 2) score += 50;
       else if (count === 3) score += 200;
@@ -231,7 +275,7 @@
     draw();
   }
 
-  // Управление
+  // Управление стрелками
   document.getElementById('btn-left').addEventListener('mousedown', e=>{
     e.preventDefault();
     if (!collide(pos.x-1,pos.y)) pos.x--;
@@ -256,25 +300,25 @@
     draw();
   });
 
-  // Кнопка рестарта
+  // Рестарт
   restart.addEventListener('mousedown', ()=> resetGame());
 
-  // Кнопка управления музыкой
+  // Музыка
   let musicOn = true;
+  bgMusic.load(); // гарантируем загрузку
   musicBtn.addEventListener('click', () => {
     musicOn = !musicOn;
     if (musicOn) {
-      bgMusic.play();
+      bgMusic.play().catch(()=>{}); 
       musicBtn.textContent = 'Музыка: Вкл';
     } else {
       bgMusic.pause();
       musicBtn.textContent = 'Музыка: Выкл';
     }
   });
-
-  // Автостарт музыки (по клику страницы, чтобы обойти блокировки браузера)
+  // Автостарт музыки по первому клику
   document.body.addEventListener('click', () => {
-    if (musicOn && bgMusic.paused) bgMusic.play();
+    if (musicOn) bgMusic.play().catch(()=>{});
   }, { once: true });
 
   // Старт игры
