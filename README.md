@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <title>Типо тетрис</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -15,16 +15,19 @@
     h1 { margin-bottom: 5px; }
     #top-bar {
       display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap;
       max-width: 480px; margin: auto; padding: 0 10px;
     }
-    #score-box { font-size: 18px; }
+    #score-box { font-size: 18px; margin: 5px; }
     #restart, #music-toggle {
       padding: 5px 10px; font-size: 14px; cursor: pointer;
       background: #555; color: #fafafa; border: none; border-radius: 4px;
+      margin: 5px;
     }
     #speed-select {
       padding: 4px; font-size: 14px;
       background: #333; color: #fafafa; border: none; border-radius: 4px;
+      margin: 5px;
     }
     #game-container {
       display: flex; justify-content: center; align-items: flex-start;
@@ -64,17 +67,14 @@
   <h1>Типо тетрис</h1>
   <div id="top-bar">
     <button id="restart">Заново</button>
-    <div>
-      Скорость:
-      <select id="speed-select">
-        <option value="1000">1.00×</option>
-        <option value="1333">0.75×</option>
-        <option value="2000">0.50×</option>
-        <option value="800">1.25×</option>
-        <option value="666">1.50×</option>
-      </select>
-    </div>
     <div id="score-box">Очки: 0</div>
+    <select id="speed-select">
+      <option value="1000">1.00×</option>
+      <option value="1333">0.75×</option>
+      <option value="2000">0.50×</option>
+      <option value="800">1.25×</option>
+      <option value="666">1.50×</option>
+    </select>
     <button id="music-toggle">Музыка</button>
   </div>
 
@@ -96,15 +96,15 @@
   </audio>
 
 <script>
-  const COLS=10, ROWS=16;
-  const boardEl=document.getElementById('board');
-  const scoreBox=document.getElementById('score-box');
-  const restartBtn=document.getElementById('restart');
-  const speedSelect=document.getElementById('speed-select');
-  const musicToggle=document.getElementById('music-toggle');
-  const bgm=document.getElementById('bgm');
+  const COLS = 10, ROWS = 16;
+  const boardEl = document.getElementById('board');
+  const scoreBox = document.getElementById('score-box');
+  const restartBtn = document.getElementById('restart');
+  const speedSelect = document.getElementById('speed-select');
+  const musicToggle = document.getElementById('music-toggle');
+  const bgm = document.getElementById('bgm');
 
-  let grid, current, pos, score=0, intervalId;
+  let grid, current, pos, score = 0, intervalId;
 
   const SHAPES = [
     [[1,1,1,1]],
@@ -116,106 +116,120 @@
     [[1,0],[1,1]]
   ];
 
-  // Создаём поле
-  for(let i=0;i<COLS*ROWS;i++){
-    const c=document.createElement('div');
-    c.className='cell';
-    boardEl.appendChild(c);
+  // Инициализация поля
+  for (let i = 0; i < COLS * ROWS; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    boardEl.appendChild(cell);
   }
-  const cells=boardEl.children;
+  const cells = boardEl.children;
 
-  function resetGame(){
+  function resetGame() {
     clearInterval(intervalId);
-    grid=Array.from({length:ROWS},()=>Array(COLS).fill(0));
-    score=0; scoreBox.textContent='Очки: 0';
+    grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+    score = 0; scoreBox.textContent = 'Очки: 0';
     spawnFigure(); draw();
-    intervalId=setInterval(gameTick, parseInt(speedSelect.value));
+    intervalId = setInterval(gameTick, parseInt(speedSelect.value));
   }
 
-  function spawnFigure(){
-    const s=SHAPES[Math.floor(Math.random()*SHAPES.length)];
-    current=s.map(r=>[...r]);
-    pos={ x: Math.floor((COLS-current[0].length)/2), y:0 };
-    if(collide(pos.x,pos.y)){ clearInterval(intervalId); alert('Игра окончена!'); }
+  function spawnFigure() {
+    const s = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+    current = s.map(r => [...r]);
+    pos = { x: Math.floor((COLS - current[0].length) / 2), y: 0 };
+    if (hasCollision(pos.x, pos.y)) {
+      clearInterval(intervalId);
+      alert('Игра окончена!');
+    }
   }
 
-  function collide(px,py,fig=current){
-    for(let y=0;y<fig.length;y++){
-      for(let x=0;x<fig[0].length;x++){
-        if(fig[y][x]){
-          const nx=px+x, ny=py+y;
-          if(nx<0||nx>=COLS||ny>=ROWS||grid[ny][nx]) return true;
+  function hasCollision(px, py, fig = current) {
+    for (let y = 0; y < fig.length; y++) {
+      for (let x = 0; x < fig[0].length; x++) {
+        if (fig[y][x]) {
+          const nx = px + x, ny = py + y;
+          if (nx < 0 || nx >= COLS || ny >= ROWS || grid[ny][nx]) return true;
         }
       }
     }
     return false;
   }
 
-  function draw(){
-    // очистка
-    grid.flat().forEach((v,i)=>cells[i].innerHTML='');
-    // занятые
-    grid.forEach((row,y)=>row.forEach((v,x)=>{
-      if(v) cells[y*COLS+x].innerHTML='<div class="block"></div>';
-    }));
-    // ghost
-    let gy=pos.y;
-    while(!collide(pos.x,gy+1)) gy++;
-    current.forEach((r,ry)=>r.forEach((v,rx)=>{
-      if(v) cells[(gy+ry)*COLS+pos.x+rx].innerHTML='<div class="ghost"></div>';
-    }));
-    // текущая
-    current.forEach((r,ry)=>r.forEach((v,rx)=>{
-      if(v) cells[(pos.y+ry)*COLS+pos.x+rx].innerHTML='<div class="block"></div>';
-    }));
+  function draw() {
+    // Очистить поле
+    grid.flat().forEach((v, i) => cells[i].innerHTML = '');
+    // Рисуем зафиксированные блоки
+    grid.forEach((row, y) => {
+      row.forEach((v, x) => {
+        if (v) cells[y * COLS + x].innerHTML = '<div class="block"></div>';
+      });
+    });
+    // Рисуем ghost
+    let gy = pos.y;
+    while (!hasCollision(pos.x, gy + 1)) gy++;
+    current.forEach((r, ry) => {
+      r.forEach((v, rx) => {
+        if (v) cells[(gy + ry) * COLS + pos.x + rx].innerHTML = '<div class="ghost"></div>';
+      });
+    });
+    // Рисуем текущую фигуру
+    current.forEach((r, ry) => {
+      r.forEach((v, rx) => {
+        if (v) cells[(pos.y + ry) * COLS + pos.x + rx].innerHTML = '<div class="block"></div>';
+      });
+    });
   }
 
-  function clearLines(){
-    let lines=0;
-    for(let y=ROWS-1;y>=0;y--){
-      if(grid[y].every(c=>c)){
-        grid.splice(y,1);
+  function clearLines() {
+    let lines = 0;
+    for (let y = ROWS - 1; y >= 0; y--) {
+      if (grid[y].every(v => v)) {
+        grid.splice(y, 1);
         grid.unshift(Array(COLS).fill(0));
         lines++; y++;
       }
     }
-    if(lines){
-      score+=lines*10;
-      scoreBox.textContent='Очки: '+score;
+    if (lines) {
+      score += lines * 10;
+      scoreBox.textContent = 'Очки: ' + score;
     }
   }
 
-  function gameTick(){
-    if(!collide(pos.x,pos.y+1)) pos.y++;
-    else {
-      current.forEach((r,ry)=>r.forEach((v,rx)=>{
-        if(v) grid[pos.y+ry][pos.x+rx]=1;
-      }));
-      clearLines(); spawnFigure();
+  function gameTick() {
+    if (!hasCollision(pos.x, pos.y + 1)) {
+      pos.y++;
+    } else {
+      current.forEach((r, ry) =>
+        r.forEach((v, rx) => {
+          if (v) grid[pos.y + ry][pos.x + rx] = 1;
+        })
+      );
+      clearLines();
+      spawnFigure();
     }
     draw();
   }
 
-  function moveLeft(){ if(!collide(pos.x-1,pos.y)) pos.x--; draw(); }
-  function moveRight(){ if(!collide(pos.x+1,pos.y)) pos.x++; draw(); }
-  function rotate(){
-    const R=current[0].map((_,i)=>current.map(r=>r[i]).reverse());
-    if(!collide(pos.x,pos.y,R)) current=R;
+  // Управление
+  function moveLeft() { if (!hasCollision(pos.x - 1, pos.y)) pos.x--; draw(); }
+  function moveRight() { if (!hasCollision(pos.x + 1, pos.y)) pos.x++; draw(); }
+  function rotate() {
+    const R = current[0].map((_, i) => current.map(r => r[i]).reverse());
+    if (!hasCollision(pos.x, pos.y, R)) current = R;
     draw();
   }
-  function softDrop(){ for(let i=0;i<3;i++){ if(!collide(pos.x,pos.y+1)) pos.y++; } draw(); }
+  function softDrop() { for (let i = 0; i < 3; i++) { if (!hasCollision(pos.x, pos.y + 1)) pos.y++; } draw(); }
 
-  restartBtn.onclick=e=>{ e.preventDefault(); resetGame(); };
-  speedSelect.onchange=e=>{
+  // Кнопки и события
+  restartBtn.addEventListener('click', resetGame);
+  speedSelect.addEventListener('change', () => {
     clearInterval(intervalId);
-    intervalId=setInterval(gameTick, parseInt(speedSelect.value));
-  };
-  musicToggle.onclick=e=>{
-    e.preventDefault();
-    bgm.paused?bgm.play():bgm.pause();
-  };
+    intervalId = setInterval(gameTick, parseInt(speedSelect.value));
+  });
+  musicToggle.addEventListener('click', () => {
+    bgm.paused ? bgm.play() : bgm.pause();
+  });
 
-  // старт
+  // Старт игры
   resetGame();
   bgm.play();
 </script>
