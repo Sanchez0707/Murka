@@ -1,200 +1,280 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8"/>
-  <title>Тетрис</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+  <meta charset="UTF-8">
+  <title>Типо тетрис</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <style>
-    body { margin:0; padding:0; background:#222; color:#fafafa;
-      font-family:Arial,sans-serif; text-align:center;
-      user-select:none; touch-action:manipulation;
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 10px;
+      background: #f0f0f0;
     }
-    h1 { margin:10px 0; }
-    #top-bar {
-      display:flex; justify-content:space-between; align-items:center;
-      max-width:400px; margin:auto; padding:0 10px;
+    h1 {
+      margin-bottom: 5px;
     }
-    #score-box { font-size:18px }
-    #restart { padding:5px 10px; cursor:pointer }
+    #game-container {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
     #board {
-      display:grid;
-      grid-template-columns:repeat(10,30px);
-      grid-template-rows:repeat(16,30px);
-      gap:1px; background:#444;
-      margin:10px auto; width:calc(10*30px+9px);
+      display: grid;
+      grid-template-columns: repeat(10, 30px);
+      grid-template-rows: repeat(16, 30px);
+      gap: 1px;
+      background: #ccc;
     }
     .cell {
-      position:relative; width:30px; height:30px;
-      background:#eee; border:1px solid #ccc;
+      width: 30px;
+      height: 30px;
+      background: #eee;
     }
-    .block { position:absolute; width:100%; height:100%; background:#333; }
-    .ghost { position:absolute; width:100%; height:100%; background:rgba(50,50,50,0.75); }
+    .filled {
+      background: #444;
+    }
+    .ghost {
+      background: rgba(0, 0, 0, 0.2);
+    }
+    #sidebar {
+      text-align: left;
+      min-width: 150px;
+    }
+    #score {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
     #controls {
-      display:flex; justify-content:center; gap:10px; margin:15px 0;
+      margin-top: 10px;
     }
-    #controls button {
-      width:50px; height:50px; font-size:24px;
-      background:#555; color:#fafafa; border:none; border-radius:4px;
-      cursor:pointer;
+    .btn {
+      font-size: 20px;
+      padding: 8px 12px;
+      margin: 4px;
+      border: none;
+      border-radius: 5px;
+      background: #ddd;
+      cursor: pointer;
     }
-    #controls button:active { background:#777 }
-    footer { margin:20px 0; font-size:12px; color:#888 }
+    .btn:active {
+      background: #bbb;
+    }
+    #footer {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #555;
+    }
   </style>
 </head>
 <body>
 
-  <h1>Тетрис</h1>
-  <div id="top-bar">
-    <button id="restart">Заново</button>
-    <div id="score-box">Очки: 0</div>
-  </div>
+  <h1>Типо тетрис</h1>
+  <button class="btn" onclick="restartGame()">Заново</button>
 
-  <div id="board"></div>
+  <div id="game-container">
+    <div id="board"></div>
+    <div id="sidebar">
+      <div id="score">Очки: 0</div>
+      <div>
+        <label>Скорость:
+          <select id="speedSelect" onchange="changeSpeed()">
+            <option value="1000">1.00x</option>
+            <option value="1333">0.75x</option>
+            <option value="2000">0.50x</option>
+            <option value="800">1.25x</option>
+            <option value="666">1.50x</option>
+          </select>
+        </label>
+      </div>
+      <div>
+        <button class="btn" onclick="toggleMusic()">Музыка: Вкл/Выкл</button>
+        <audio id="bgm" loop>
+          <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_4ac093ee98.mp3" type="audio/mpeg">
+        </audio>
+      </div>
+    </div>
+  </div>
 
   <div id="controls">
-    <button id="btn-left">←</button>
-    <button id="btn-right">→</button>
-    <button id="btn-rot">↻</button>
-    <button id="btn-drop">↓</button>
+    <button class="btn" onclick="moveLeft()">←</button>
+    <button class="btn" onclick="moveRight()">→</button>
+    <button class="btn" onclick="rotate()">↻</button>
+    <button class="btn" onclick="softDrop()">↓</button>
   </div>
 
-  <footer>Я не пытаюсь кого-либо плагиатить</footer>
+  <div id="footer">я не пытаюсь кого либо плагиатить</div>
 
-<script>
-  const COLS = 10, ROWS = 16;
-  let dropInt, score = 0;
+  <script>
+    const width = 10, height = 16;
+    const boardEl = document.getElementById('board');
+    const scoreEl = document.getElementById('score');
+    const speedSelect = document.getElementById('speedSelect');
+    const bgm = document.getElementById('bgm');
 
-  const board = document.getElementById('board');
-  const scoreBox = document.getElementById('score-box');
-  const restart = document.getElementById('restart');
+    let board = [], current, pos, interval, score = 0, dropDelay = 1000;
 
-  // создаём ячейки
-  for (let i = 0; i < COLS * ROWS; i++) {
-    const c = document.createElement('div');
-    c.className = 'cell';
-    board.appendChild(c);
-  }
-  const cells = board.children;
+    const figures = [
+      [[1,1,1,1]], // палка
+      [[1,1],[1,1]], // квадрат
+      [[0,1,0],[1,1,1]], // крест
+      [[1,0,0],[1,1,1]], // L
+      [[1,1,1]], // новая 3х1
+      [[1,1]],   // новая 2х1
+      [[1,0],[1,1]] // маленькая L
+    ];
 
-  // Фигуры: I, O, T, L, 3‑блочный, 2‑блочный, маленький L
-  const SHAPES = [
-    [[1,1,1,1]],         // I
-    [[1,1],[1,1]],       // O
-    [[0,1,0],[1,1,1]],   // T
-    [[1,0,0],[1,1,1]],   // L
-    [[1,1,1]],           // длина 3
-    [[1,1]],             // длина 2
-    [[1,0],[1,1]]        // маленькое L
-  ];
-
-  let grid, current, pos;
-
-  function resetGame() {
-    clearInterval(dropInt);
-    grid = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
-    score = 0;
-    scoreBox.textContent = 'Очки: 0';
-    spawn(); draw();
-    dropInt = setInterval(drop, 500);
-  }
-
-  function spawn() {
-    const s = SHAPES[Math.floor(Math.random()*SHAPES.length)];
-    current = s.map(r=>[...r]);
-    pos = { x: Math.floor((COLS - current[0].length)/2), y: 0 };
-    if (collide(pos.x,pos.y)) {
-      clearInterval(dropInt);
-      alert('Игра окончена!');
+    function createBoard() {
+      board = Array.from({ length: height }, () => Array(width).fill(0));
+      boardEl.innerHTML = '';
+      for (let i = 0; i < width * height; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        boardEl.appendChild(cell);
+      }
     }
-  }
 
-  function collide(px,py, fig=current) {
-    for (let y=0; y<fig.length; y++){
-      for (let x=0; x<fig[0].length; x++){
-        if (fig[y][x]) {
-          const nx=px+x, ny=py+y;
-          if (nx<0||nx>=COLS||ny>=ROWS||grid[ny][nx]) return true;
+    function draw() {
+      const cells = boardEl.children;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const cell = cells[y * width + x];
+          cell.className = 'cell';
+          if (board[y][x]) cell.classList.add('filled');
+        }
+      }
+
+      // тень
+      let ghostY = pos.y;
+      while (!hasCollision(pos.x, ghostY + 1, current)) ghostY++;
+      for (let y = 0; y < current.length; y++) {
+        for (let x = 0; x < current[0].length; x++) {
+          if (current[y][x] && ghostY + y >= 0) {
+            const cell = cells[(ghostY + y) * width + (pos.x + x)];
+            if (cell) cell.classList.add('ghost');
+          }
+        }
+      }
+
+      // текущая фигура
+      for (let y = 0; y < current.length; y++) {
+        for (let x = 0; x < current[0].length; x++) {
+          if (current[y][x] && pos.y + y >= 0) {
+            const cell = cells[(pos.y + y) * width + (pos.x + x)];
+            if (cell) cell.classList.add('filled');
+          }
         }
       }
     }
-    return false;
-  }
 
-  function draw() {
-    // очистка
-    grid.flat().forEach((v,i)=> cells[i].innerHTML='');
-    // занятые
-    grid.forEach((row,y)=>row.forEach((v,x)=>{
-      if (v) cells[y*COLS+x].innerHTML='<div class="block"></div>';
-    }));
-    // ghost
-    let gy = pos.y;
-    while(!collide(pos.x,gy+1)) gy++;
-    current.forEach((r,ry)=>r.forEach((v,rx)=>{
-      if(v) cells[(gy+ry)*COLS + pos.x+rx].innerHTML='<div class="ghost"></div>';
-    }));
-    // current
-    current.forEach((r,ry)=>r.forEach((v,rx)=>{
-      if(v) cells[(pos.y+ry)*COLS + pos.x+rx].innerHTML='<div class="block"></div>';
-    }));
-  }
+    function hasCollision(x, y, fig) {
+      for (let i = 0; i < fig.length; i++) {
+        for (let j = 0; j < fig[0].length; j++) {
+          if (fig[i][j]) {
+            const nx = x + j, ny = y + i;
+            if (nx < 0 || nx >= width || ny >= height || (ny >= 0 && board[ny][nx])) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
 
-  function clearLines() {
-    let lines=0;
-    for (let y=ROWS-1; y>=0; y--){
-      if (grid[y].every(v=>v)) {
-        grid.splice(y,1);
-        grid.unshift(Array(COLS).fill(0));
-        lines++; y++;
+    function mergeFigure() {
+      for (let y = 0; y < current.length; y++) {
+        for (let x = 0; x < current[0].length; x++) {
+          if (current[y][x] && pos.y + y >= 0) {
+            board[pos.y + y][pos.x + x] = 1;
+          }
+        }
       }
     }
-    if (lines) {
-      score += lines*10;
-      scoreBox.textContent = 'Очки: ' + score;
+
+    function clearLines() {
+      let lines = 0;
+      for (let y = height - 1; y >= 0; y--) {
+        if (board[y].every(cell => cell)) {
+          board.splice(y, 1);
+          board.unshift(Array(width).fill(0));
+          lines++;
+        }
+      }
+      score += lines * 10;
+      scoreEl.textContent = "Очки: " + score;
     }
-  }
 
-  function drop() {
-    if (!collide(pos.x,pos.y+1)) {
-      pos.y++;
-    } else {
-      current.forEach((r,ry)=>r.forEach((v,rx)=>{
-        if (v) grid[pos.y+ry][pos.x+rx] = 1;
-      }));
-      clearLines();
-      spawn();
+    function spawnFigure() {
+      current = JSON.parse(JSON.stringify(figures[Math.floor(Math.random() * figures.length)]));
+      pos = { x: Math.floor((width - current[0].length) / 2), y: -1 };
+      if (hasCollision(pos.x, pos.y + 1, current)) {
+        alert("Игра окончена!");
+        restartGame();
+      }
     }
-    draw();
-  }
 
-  // управление
-  document.getElementById('btn-left').addEventListener('mousedown', e=>{
-    e.preventDefault();
-    if (!collide(pos.x-1,pos.y)) pos.x--;
-    draw();
-  });
-  document.getElementById('btn-right').addEventListener('mousedown', e=>{
-    e.preventDefault();
-    if (!collide(pos.x+1,pos.y)) pos.x++;
-    draw();
-  });
-  document.getElementById('btn-rot').addEventListener('mousedown', e=>{
-    e.preventDefault();
-    const R = current[0].map((_,i)=>current.map(r=>r[i]).reverse());
-    if (!collide(pos.x,pos.y,R)) current = R;
-    draw();
-  });
-  document.getElementById('btn-drop').addEventListener('mousedown', e=>{
-    e.preventDefault();
-    for (let i=0; i<3; i++){
-      if (!collide(pos.x,pos.y+1)) pos.y++;
+    function gameTick() {
+      if (!hasCollision(pos.x, pos.y + 1, current)) {
+        pos.y++;
+      } else {
+        mergeFigure();
+        clearLines();
+        spawnFigure();
+      }
+      draw();
     }
-    draw();
-  });
-  restart.addEventListener('mousedown', ()=> resetGame());
 
-  resetGame();
-</script>
+    function rotate() {
+      const rotated = current[0].map((_, i) => current.map(r => r[i]).reverse());
+      if (!hasCollision(pos.x, pos.y, rotated)) current = rotated;
+      draw();
+    }
 
+    function moveLeft() {
+      if (!hasCollision(pos.x - 1, pos.y, current)) pos.x--;
+      draw();
+    }
+
+    function moveRight() {
+      if (!hasCollision(pos.x + 1, pos.y, current)) pos.x++;
+      draw();
+    }
+
+    function softDrop() {
+      let steps = 3;
+      while (steps-- && !hasCollision(pos.x, pos.y + 1, current)) {
+        pos.y++;
+      }
+      draw();
+    }
+
+    function toggleMusic() {
+      if (bgm.paused) bgm.play();
+      else bgm.pause();
+    }
+
+    function changeSpeed() {
+      dropDelay = parseInt(speedSelect.value);
+      clearInterval(interval);
+      interval = setInterval(gameTick, dropDelay);
+    }
+
+    function restartGame() {
+      clearInterval(interval);
+      score = 0;
+      createBoard();
+      spawnFigure();
+      interval = setInterval(gameTick, dropDelay);
+      draw();
+    }
+
+    // Инициализация
+    createBoard();
+    restartGame();
+    bgm.play();
+  </script>
 </body>
 </html>
