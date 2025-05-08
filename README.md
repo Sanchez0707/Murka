@@ -24,11 +24,29 @@
       margin:10px auto; width:calc(10*30px+9px);
     }
     .cell {
-      position:relative; width:30px; height:30px;
-      background:#eee; border:1px solid #ccc;
+      position: relative; width: 30px; height: 30px;
+      background: #eee; border: 1px solid #ccc;
+      overflow: hidden;
     }
-    .block { position:absolute; width:100%; height:100%; background:#333; }
-    .ghost { position:absolute; width:100%; height:100%; background:rgba(50,50,50,0.75); }
+    /* Плавное появление/движение блока */
+    .block {
+      position: absolute; width:100%; height:100%;
+      background: #333;
+      transition: top 0.1s ease;
+    }
+    .ghost {
+      position:absolute; width:100%; height:100%;
+      background: rgba(50,50,50,0.75);
+    }
+    /* Анимация очистки линии */
+    @keyframes clear-line {
+      0%   { opacity: 1; }
+      50%  { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    .clearing .block {
+      animation: clear-line 0.3s ease-in-out 2;
+    }
     #controls {
       display:flex; justify-content:center; gap:10px; margin:15px 0;
     }
@@ -82,7 +100,7 @@
     [[1,1],[1,1]],       // O
     [[0,1,0],[1,1,1]],   // T
     [[1,0,0],[1,1,1]],   // L
-    [[0,0,1],[1,1,1]],   // зеркальный L  <-- добавлено
+    [[0,0,1],[1,1,1]],   // зеркальный L
     [[1,1,1]],           // длина 3
     [[1,1]],             // длина 2
     [[1,0],[1,1]]        // маленькое L
@@ -126,7 +144,13 @@
     grid.flat().forEach((v,i)=> cells[i].innerHTML='');
     // занятые
     grid.forEach((row,y)=>row.forEach((v,x)=>{
-      if (v) cells[y*COLS+x].innerHTML='<div class="block"></div>';
+      if (v) {
+        const div = document.createElement('div');
+        div.className = 'block';
+        // позиционируем для плавного перехода
+        div.style.top = '0px';
+        cells[y*COLS+x].appendChild(div);
+      }
     }));
     // ghost
     let gy = pos.y;
@@ -136,28 +160,50 @@
     }));
     // current
     current.forEach((r,ry)=>r.forEach((v,rx)=>{
-      if(v) cells[(pos.y+ry)*COLS + pos.x+rx].innerHTML='<div class="block"></div>';
+      if(v) {
+        const div = document.createElement('div');
+        div.className = 'block';
+        div.style.top = '0px';
+        cells[(pos.y+ry)*COLS + pos.x+rx].appendChild(div);
+      }
     }));
   }
 
   function clearLines() {
-    let lines=0;
-    for (let y=ROWS-1; y>=0; y--){
-      if (grid[y].every(v=>v)) {
-        grid.splice(y,1);
-        grid.unshift(Array(COLS).fill(0));
-        lines++; y++;
+    const lines = [];
+    // находим полные линии
+    for (let y = ROWS - 1; y >= 0; y--) {
+      if (grid[y].every(v => v)) {
+        lines.push(y);
       }
     }
+    if (!lines.length) return;
 
-    if (lines) {
-      // новая система подсчёта очков
-      if (lines === 1) score += 10;
-      else if (lines === 2) score += 50;
-      else if (lines === 3) score += 200;
-      else score += 200; // для 4+ пока тоже 200
+    // мигаем
+    lines.forEach(y => {
+      for (let x = 0; x < COLS; x++) {
+        const idx = y * COLS + x;
+        cells[idx].classList.add('clearing');
+      }
+    });
+
+    setTimeout(() => {
+      // удаляем линии и считаем очки
+      const count = lines.length;
+      lines.forEach(y => {
+        grid.splice(y, 1);
+        grid.unshift(Array(COLS).fill(0));
+      });
+      if (count === 1) score += 10;
+      else if (count === 2) score += 50;
+      else if (count === 3) score += 200;
+      else score += 200;
       scoreBox.textContent = 'Очки: ' + score;
-    }
+
+      // убираем класс и перерисовываем
+      cells.forEach(c => c.classList.remove('clearing'));
+      draw();
+    }, 350);
   }
 
   function drop() {
