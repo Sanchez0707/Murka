@@ -140,25 +140,30 @@
   }
 
   function draw() {
-    // очистка
+    // Сбрасываем анимацию очистки у всех ячеек
+    Array.from(cells).forEach(c => c.classList.remove('clearing'));
+
+    // Очищаем всё содержимое
     grid.flat().forEach((v,i)=> cells[i].innerHTML='');
-    // занятые
+
+    // Рисуем зафиксированные блоки
     grid.forEach((row,y)=>row.forEach((v,x)=>{
       if (v) {
         const div = document.createElement('div');
         div.className = 'block';
-        // позиционируем для плавного перехода
         div.style.top = '0px';
         cells[y*COLS+x].appendChild(div);
       }
     }));
-    // ghost
+
+    // Ghost-фигура
     let gy = pos.y;
     while(!collide(pos.x,gy+1)) gy++;
     current.forEach((r,ry)=>r.forEach((v,rx)=>{
-      if(v) cells[(gy+ry)*COLS + pos.x+rx].innerHTML='<div class="ghost"></div>';
+      if(v) cells[(gy+ry)*COLS + pos.x+rx].innerHTML = '<div class="ghost"></div>';
     }));
-    // current
+
+    // Текущая фигура
     current.forEach((r,ry)=>r.forEach((v,rx)=>{
       if(v) {
         const div = document.createElement('div');
@@ -171,7 +176,7 @@
 
   function clearLines() {
     const lines = [];
-    // находим полные линии
+    // Находим полные линии
     for (let y = ROWS - 1; y >= 0; y--) {
       if (grid[y].every(v => v)) {
         lines.push(y);
@@ -179,7 +184,7 @@
     }
     if (!lines.length) return;
 
-    // мигаем
+    // Мигание линий
     lines.forEach(y => {
       for (let x = 0; x < COLS; x++) {
         const idx = y * COLS + x;
@@ -188,7 +193,7 @@
     });
 
     setTimeout(() => {
-      // удаляем линии и считаем очки
+      // Удаляем линии и считаем очки
       const count = lines.length;
       lines.forEach(y => {
         grid.splice(y, 1);
@@ -200,8 +205,7 @@
       else score += 200;
       scoreBox.textContent = 'Очки: ' + score;
 
-      // убираем класс и перерисовываем
-      cells.forEach(c => c.classList.remove('clearing'));
+      // Перерисовываем поле
       draw();
     }, 350);
   }
@@ -219,7 +223,7 @@
     draw();
   }
 
-  // управление
+  // Управление
   document.getElementById('btn-left').addEventListener('mousedown', e=>{
     e.preventDefault();
     if (!collide(pos.x-1,pos.y)) pos.x--;
