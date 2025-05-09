@@ -31,12 +31,8 @@
       border:none;
       border-radius:4px;
     }
-    #top-bar button:active {
-      background:#777;
-    }
-    #score-box, #best-box {
-      font-size:18px;
-    }
+    #top-bar button:active { background:#777 }
+    #score-box, #best-box { font-size:18px }
 
     /* Поле */
     #board {
@@ -89,9 +85,7 @@
       border:none; border-radius:4px;
       cursor:pointer;
     }
-    #controls button:active {
-      background:#777;
-    }
+    #controls button:active { background:#777 }
 
     footer {
       margin:20px 0;
@@ -104,15 +98,12 @@
 
   <h1>Тетрис</h1>
   <div id="top-bar">
-    <!-- Слева: рестарт -->
     <button id="restart">Заново</button>
-    <!-- Центр: счёт | лучший -->
     <div>
       <span id="score-box">Очки: 0</span>
       &nbsp;|&nbsp;
       <span id="best-box">Лучший: 0</span>
     </div>
-    <!-- Справа: музыка -->
     <button id="btn-music">Музыка: Вкл</button>
   </div>
 
@@ -127,7 +118,10 @@
 
   <footer>Я не пытаюсь кого-либо плагиатить</footer>
 
-  <!-- Фоновая музыка -->
+  <!-- Файловая структура: 
+       Если mp3 в той же папке, оставь как есть. 
+       Если в подпапке media/, укажи src="media/Video_Game_…mp3" 
+  -->
   <audio id="bg-music" loop preload="auto">
     <source src="Video_Game_Players_-_Tetris_Theme_48152782.mp3" type="audio/mpeg">
   </audio>
@@ -142,7 +136,7 @@
   const musicBtn = document.getElementById('btn-music');
   const bgMusic = document.getElementById('bg-music');
 
-  // Инициализация доски
+  // Построение поля
   for (let i = 0; i < COLS * ROWS; i++) {
     const c = document.createElement('div');
     c.className = 'cell';
@@ -164,7 +158,7 @@
 
   let grid, current, pos;
 
-  // Загрузка лучшего счёта
+  // Лучший счёт из localStorage
   let best = parseInt(localStorage.getItem('tetrisBest')) || 0;
   bestBox.textContent = 'Лучший: ' + best;
 
@@ -205,11 +199,11 @@
   }
 
   function draw() {
-    // Сбрасываем очистку
+    // Сбрасываем анимацию очистки
     Array.from(cells).forEach(c => c.classList.remove('clearing'));
     // Очищаем поле
     grid.flat().forEach((v,i)=> cells[i].innerHTML='');
-    // Рисуем зафиксированные блоки
+    // Рисуем зафиксированные
     grid.forEach((row,y)=>row.forEach((v,x)=>{
       if (v) {
         const div = document.createElement('div');
@@ -275,28 +269,21 @@
     draw();
   }
 
-  // Управление стрелками
+  // Управление
   document.getElementById('btn-left').addEventListener('mousedown', e=>{
-    e.preventDefault();
-    if (!collide(pos.x-1,pos.y)) pos.x--;
-    draw();
+    e.preventDefault(); if (!collide(pos.x-1,pos.y)) pos.x--; draw();
   });
   document.getElementById('btn-right').addEventListener('mousedown', e=>{
-    e.preventDefault();
-    if (!collide(pos.x+1,pos.y)) pos.x++;
-    draw();
+    e.preventDefault(); if (!collide(pos.x+1,pos.y)) pos.x++; draw();
   });
   document.getElementById('btn-rot').addEventListener('mousedown', e=>{
     e.preventDefault();
     const R = current[0].map((_,i)=>current.map(r=>r[i]).reverse());
-    if (!collide(pos.x,pos.y,R)) current = R;
-    draw();
+    if (!collide(pos.x,pos.y,R)) current = R; draw();
   });
   document.getElementById('btn-drop').addEventListener('mousedown', e=>{
     e.preventDefault();
-    for (let i=0; i<3; i++){
-      if (!collide(pos.x,pos.y+1)) pos.y++;
-    }
+    for (let i=0; i<3; i++) if (!collide(pos.x,pos.y+1)) pos.y++;
     draw();
   });
 
@@ -305,23 +292,17 @@
 
   // Музыка
   let musicOn = true;
-  bgMusic.load(); // гарантируем загрузку
+  bgMusic.load();
   musicBtn.addEventListener('click', () => {
     musicOn = !musicOn;
-    if (musicOn) {
-      bgMusic.play().catch(()=>{}); 
-      musicBtn.textContent = 'Музыка: Вкл';
-    } else {
-      bgMusic.pause();
-      musicBtn.textContent = 'Музыка: Выкл';
-    }
+    if (musicOn) bgMusic.play().catch(()=>{}), musicBtn.textContent = 'Музыка: Вкл';
+    else bgMusic.pause(), musicBtn.textContent = 'Музыка: Выкл';
   });
-  // Автостарт музыки по первому клику
   document.body.addEventListener('click', () => {
     if (musicOn) bgMusic.play().catch(()=>{});
   }, { once: true });
 
-  // Старт игры
+  // Старт
   resetGame();
 </script>
 
