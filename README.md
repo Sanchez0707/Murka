@@ -7,60 +7,50 @@
   <style>
     body {
       margin:0; padding:0;
-      background:#222; color:#fafafa;
-      font-family:Arial,sans-serif;
+      background:#111; color:#fafafa;
+      font-family:'Courier New', monospace;
       text-align:center;
       user-select:none; touch-action:manipulation;
     }
-    h1 { margin:10px 0; }
+    h1 { margin:10px 0; color:#0ff; text-shadow: 0 0 8px #0ff; }
 
     /* Верхняя панель */
     #top-bar {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      max-width:400px;
-      margin: auto;
-      padding: 0 10px;
+      display:flex; justify-content:space-between; align-items:center;
+      max-width:400px; margin:auto; padding:0 10px;
     }
     #top-bar button {
-      padding:5px 10px;
-      cursor:pointer;
-      background:#555;
-      color:#fafafa;
-      border:none;
-      border-radius:4px;
+      padding:5px 10px; cursor:pointer;
+      background:#222; color:#0ff; border:2px solid #0ff; border-radius:4px;
+      text-shadow: 0 0 4px #0ff;  
     }
-    #top-bar button:active { background:#777 }
-    #score-box, #best-box { font-size:18px }
+    #top-bar button:active { background:#0a0a0a; }
+    #score-box, #best-box {
+      font-size:18px; color:#0ff; text-shadow:0 0 4px #0ff;
+    }
 
     /* Поле */
     #board {
       display:grid;
       grid-template-columns:repeat(10,30px);
       grid-template-rows:repeat(16,30px);
-      gap:1px;
-      background:#444;
-      margin:10px auto;
-      width:calc(10*30px+9px);
+      gap:1px; background:#222;
+      margin:10px auto; width:calc(10*30px+9px);
+      box-shadow: 0 0 8px #0ff inset;
     }
     .cell {
-      position: relative;
-      width: 30px; height: 30px;
-      background: #eee;
-      border: 1px solid #ccc;
-      overflow: hidden;
+      position: relative; width:30px; height:30px;
+      background:#000; border:1px solid #0a0a0a;
+      overflow:hidden;
     }
     .block {
-      position: absolute;
-      width:100%; height:100%;
-      background: #333;
+      position:absolute; width:100%; height:100%;
+      background:#0ff; box-shadow:0 0 4px #0ff, inset 0 0 4px #0ff;
       transition: top 0.1s ease;
     }
     .ghost {
-      position:absolute;
-      width:100%; height:100%;
-      background: rgba(50,50,50,0.75);
+      position:absolute; width:100%; height:100%;
+      background:rgba(0,255,255,0.3);
     }
     @keyframes clear-line {
       0%   { opacity: 1; }
@@ -73,25 +63,55 @@
 
     /* Кнопки управления */
     #controls {
-      display:flex;
-      justify-content:center;
-      gap:10px;
-      margin:15px 0;
+      display:flex; justify-content:center; gap:10px; margin:15px 0;
     }
     #controls button {
-      width:50px; height:50px;
-      font-size:24px;
-      background:#555; color:#fafafa;
-      border:none; border-radius:4px;
-      cursor:pointer;
+      width:50px; height:50px; font-size:24px;
+      background:#222; color:#0ff; border:2px solid #0ff; border-radius:4px;
+      cursor:pointer; text-shadow:0 0 4px #0ff;
     }
-    #controls button:active { background:#777 }
+    #controls button:active { background:#0a0a0a; }
 
     footer {
-      margin:20px 0;
-      font-size:12px;
-      color:#888;
+      margin:20px 0; font-size:12px; color:#555;
     }
+
+    /* ЭКРАН КОНЦА ИГРЫ */
+    #game-over-screen {
+      display: none;
+      position: fixed; top:0; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,0.85);
+      z-index:1000;
+      justify-content:center; align-items:center;
+    }
+    #game-over-content {
+      background:#000;
+      border:4px solid #0ff;
+      padding:30px;
+      border-radius:8px;
+      text-align:center;
+      box-shadow:0 0 12px #0ff;
+    }
+    #game-over-content h2 {
+      margin:0 0 15px;
+      font-size:28px;
+      color:#0ff;
+      text-shadow:0 0 6px #0ff;
+    }
+    #game-over-content p {
+      font-size:20px;
+      margin:0 0 20px;
+      color:#fff;
+    }
+    #play-again {
+      padding:10px 20px;
+      font-size:18px;
+      background:#0ff; color:#000;
+      border:none; border-radius:4px;
+      cursor:pointer;
+      box-shadow:0 0 6px #0ff;
+    }
+    #play-again:active { background:#0cc; }
   </style>
 </head>
 <body>
@@ -116,12 +136,17 @@
     <button id="btn-drop">↓</button>
   </div>
 
+  <!-- Экран конца игры -->
+  <div id="game-over-screen">
+    <div id="game-over-content">
+      <h2>Игра окончена!</h2>
+      <p id="final-score">Вы набрали 0 очков</p>
+      <button id="play-again">Играть снова</button>
+    </div>
+  </div>
+
   <footer>Я не пытаюсь кого-либо плагиатить</footer>
 
-  <!-- Файловая структура: 
-       Если mp3 в той же папке, оставь как есть. 
-       Если в подпапке media/, укажи src="media/Video_Game_…mp3" 
-  -->
   <audio id="bg-music" loop preload="auto">
     <source src="Video_Game_Players_-_Tetris_Theme_48152782.mp3" type="audio/mpeg">
   </audio>
@@ -135,6 +160,9 @@
   const restart = document.getElementById('restart');
   const musicBtn = document.getElementById('btn-music');
   const bgMusic = document.getElementById('bg-music');
+  const gameOverScreen = document.getElementById('game-over-screen');
+  const finalScore = document.getElementById('final-score');
+  const playAgain = document.getElementById('play-again');
 
   // Построение поля
   for (let i = 0; i < COLS * ROWS; i++) {
@@ -157,12 +185,11 @@
   ];
 
   let grid, current, pos;
-
-  // Лучший счёт из localStorage
   let best = parseInt(localStorage.getItem('tetrisBest')) || 0;
   bestBox.textContent = 'Лучший: ' + best;
 
   function resetGame() {
+    gameOverScreen.style.display = 'none';
     clearInterval(dropInt);
     grid = Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
     score = 0;
@@ -175,15 +202,7 @@
     const s = SHAPES[Math.floor(Math.random()*SHAPES.length)];
     current = s.map(r=>[...r]);
     pos = { x: Math.floor((COLS - current[0].length)/2), y: 0 };
-    if (collide(pos.x,pos.y)) {
-      clearInterval(dropInt);
-      alert('Игра окончена!');
-      if (score > best) {
-        best = score;
-        localStorage.setItem('tetrisBest', best);
-        bestBox.textContent = 'Лучший: ' + best;
-      }
-    }
+    if (collide(pos.x,pos.y)) endGame();
   }
 
   function collide(px,py, fig=current) {
@@ -199,11 +218,8 @@
   }
 
   function draw() {
-    // Сбрасываем анимацию очистки
     Array.from(cells).forEach(c => c.classList.remove('clearing'));
-    // Очищаем поле
     grid.flat().forEach((v,i)=> cells[i].innerHTML='');
-    // Рисуем зафиксированные
     grid.forEach((row,y)=>row.forEach((v,x)=>{
       if (v) {
         const div = document.createElement('div');
@@ -212,13 +228,11 @@
         cells[y*COLS+x].appendChild(div);
       }
     }));
-    // Ghost
     let gy = pos.y;
     while(!collide(pos.x,gy+1)) gy++;
     current.forEach((r,ry)=>r.forEach((v,rx)=>{
       if(v) cells[(gy+ry)*COLS + pos.x+rx].innerHTML = '<div class="ghost"></div>';
     }));
-    // Current
     current.forEach((r,ry)=>r.forEach((v,rx)=>{
       if(v) {
         const div = document.createElement('div');
@@ -235,7 +249,6 @@
       if (grid[y].every(v => v)) lines.push(y);
     }
     if (!lines.length) return;
-    // Мигание
     lines.forEach(y => {
       for (let x = 0; x < COLS; x++) {
         cells[y*COLS + x].classList.add('clearing');
@@ -257,9 +270,8 @@
   }
 
   function drop() {
-    if (!collide(pos.x,pos.y+1)) {
-      pos.y++;
-    } else {
+    if (!collide(pos.x,pos.y+1)) pos.y++;
+    else {
       current.forEach((r,ry)=>r.forEach((v,rx)=>{
         if (v) grid[pos.y+ry][pos.x+rx] = 1;
       }));
@@ -267,6 +279,17 @@
       spawn();
     }
     draw();
+  }
+
+  function endGame() {
+    clearInterval(dropInt);
+    if (score > best) {
+      best = score;
+      localStorage.setItem('tetrisBest', best);
+      bestBox.textContent = 'Лучший: ' + best;
+    }
+    finalScore.textContent = 'Вы набрали ' + score + ' очков';
+    gameOverScreen.style.display = 'flex';
   }
 
   // Управление
@@ -286,8 +309,6 @@
     for (let i=0; i<3; i++) if (!collide(pos.x,pos.y+1)) pos.y++;
     draw();
   });
-
-  // Рестарт
   restart.addEventListener('mousedown', ()=> resetGame());
 
   // Музыка
